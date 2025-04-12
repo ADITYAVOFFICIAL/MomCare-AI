@@ -1,0 +1,96 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 270 100% 99%;
+    --foreground: 280 10% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 280 10% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 280 10% 20%;
+
+    --primary: 270 50% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 90% 68%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 270 20% 95%;
+    --muted-foreground: 270 20% 45%;
+
+    --accent: 340 80% 68%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 270 20% 90%;
+    --input: 270 20% 90%;
+    --ring: 270 50% 55%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 280 20% 10%;
+    --foreground: 0 0% 98%;
+
+    --card: 280 20% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 280 20% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 270 50% 55%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 210 90% 58%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 280 20% 20%;
+    --muted-foreground: 280 20% 80%;
+
+    --accent: 340 80% 58%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 280 20% 25%;
+    --input: 280 20% 25%;
+    --ring: 270 50% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+.hero-gradient {
+  background: linear-gradient(120deg, #f9f5ff 0%, #e4f2ff 50%, #ffe6f0 100%);
+}
+
+.dashboard-gradient {
+  background: linear-gradient(135deg, rgba(126, 87, 194, 0.1) 0%, rgba(100, 181, 246, 0.1) 100%);
+}
