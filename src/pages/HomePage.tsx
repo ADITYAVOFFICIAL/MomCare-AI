@@ -17,7 +17,10 @@ import {
   Sparkles,
   Users,
   UserPlus,
-  Activity
+  Activity,
+  Package,
+  Salad,
+  Gamepad2
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 
@@ -90,111 +93,157 @@ const HomePage = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-gray-50 dark:bg-gray-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-momcare-primary">What We Offer</h2>
-            <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold text-momcare-primary dark:text-momcare-light">What We Offer</h2>
+            <p className="mt-4 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               MomCare AI provides a comprehensive suite of tools and resources to support you throughout your pregnancy journey.
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Updated Grid with more items */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"> {/* Added xl:grid-cols-4 */}
             {/* AI Chat */}
-            <div className="bg-white p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-momcare-primary">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-momcare-primary text-white mb-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-momcare-primary dark:border-momcare-accent">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-momcare-primary dark:bg-momcare-accent text-white mb-4">
                 <MessageSquare className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">AI Chat Assistant</h3>
-              <p className="mt-2 text-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">AI Chat Assistant</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Get personalized answers to your pregnancy questions anytime, tailored to your specific needs.
               </p>
-              <Link to="/chat" className="mt-4 inline-flex items-center text-momcare-primary hover:text-momcare-dark">
+              <Link to="/chat" className="mt-4 inline-flex items-center text-sm font-medium text-momcare-primary dark:text-momcare-accent hover:text-momcare-dark dark:hover:text-momcare-light">
                 Start chatting <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
             
             {/* Appointment Scheduling */}
-            <div className="bg-white p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-momcare-secondary">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-momcare-secondary text-white mb-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-momcare-secondary dark:border-blue-500">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-momcare-secondary dark:bg-blue-500 text-white mb-4">
                 <Calendar className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Appointment Scheduling</h3>
-              <p className="mt-2 text-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Appointment Scheduling</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Easily book and manage appointments with healthcare providers for your prenatal care.
               </p>
-              <Link to="/appointment" className="mt-4 inline-flex items-center text-momcare-secondary hover:text-blue-700">
+              <Link to="/appointment" className="mt-4 inline-flex items-center text-sm font-medium text-momcare-secondary dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                 Book appointment <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
             
             {/* Medical Document Management */}
-            <div className="bg-white p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-momcare-accent">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-momcare-accent text-white mb-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-momcare-accent dark:border-pink-500">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-momcare-accent dark:bg-pink-500 text-white mb-4">
                 <FilePlus className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Medical Document Management</h3>
-              <p className="mt-2 text-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Medical Document Management</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Securely store and manage your medical records, scans, and test results in one place.
               </p>
-              <Link to="/medicaldocs" className="mt-4 inline-flex items-center text-momcare-accent hover:text-pink-700">
+              <Link to="/medicaldocs" className="mt-4 inline-flex items-center text-sm font-medium text-momcare-accent dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300">
                 Manage documents <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
             
             {/* Emergency Info */}
-            <div className="bg-white p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-red-500">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-red-500 text-white mb-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-red-500 dark:border-red-600">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-red-500 dark:bg-red-600 text-white mb-4">
                 <AlertTriangle className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Emergency Information</h3>
-              <p className="mt-2 text-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Emergency Information</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Quick access to emergency contacts, warning signs, and nearby hospitals when needed most.
               </p>
-              <Link to="/emergency" className="mt-4 inline-flex items-center text-red-500 hover:text-red-700">
+              <Link to="/emergency" className="mt-4 inline-flex items-center text-sm font-medium text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
                 View emergency info <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
             
             {/* Resources & Blog */}
-            <div className="bg-white p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-green-500">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white mb-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-green-500 dark:border-green-600">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 dark:bg-green-600 text-white mb-4">
                 <BookOpen className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Resources & Blog</h3>
-              <p className="mt-2 text-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Resources & Blog</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Access informative articles, tips, and resources about pregnancy, childbirth, and early motherhood.
               </p>
-              <Link to="/resources" className="mt-4 inline-flex items-center text-green-500 hover:text-green-700">
+              <Link to="/resources" className="mt-4 inline-flex items-center text-sm font-medium text-green-500 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
                 Explore resources <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
             
             {/* Personalized Dashboard */}
-            <div className="bg-white p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-purple-500">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 text-white mb-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-purple-500 dark:border-purple-600">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 dark:bg-purple-600 text-white mb-4">
                 <Baby className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Personalized Dashboard</h3>
-              <p className="mt-2 text-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Personalized Dashboard</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Track your pregnancy journey with a personalized dashboard showing important milestones and reminders.
               </p>
-              <Link to="/dashboard" className="mt-4 inline-flex items-center text-purple-500 hover:text-purple-700">
+              <Link to="/dashboard" className="mt-4 inline-flex items-center text-sm font-medium text-purple-500 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
                 View dashboard <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
-            <div className="bg-white p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-orange-500">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white mb-4">
+
+            {/* Community Forum */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-orange-500 dark:border-orange-600">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 dark:bg-orange-600 text-white mb-4">
                 <Users className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Community Forum</h3>
-              <p className="mt-2 text-gray-600">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Community Forum</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Connect with other expectant mothers, share experiences, and find support in our community.
               </p>
-              <Link to="/forum" className="mt-4 inline-flex items-center text-orange-500 hover:text-orange-700">
+              <Link to="/forum" className="mt-4 inline-flex items-center text-sm font-medium text-orange-500 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
                 Join the discussion <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
+
+            {/* Product Suggestions */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-indigo-500 dark:border-indigo-600">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 dark:bg-indigo-600 text-white mb-4">
+                <Package className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">AI Product Suggestions</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
+                Discover helpful products for pregnancy and baby care, recommended by AI based on your profile or needs.
+              </p>
+              <Link to="/products" className="mt-4 inline-flex items-center text-sm font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+                Find products <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* Meal & Exercise Ideas */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-teal-500 dark:border-teal-600">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-teal-500 dark:bg-teal-600 text-white mb-4">
+                <Salad className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Meal & Exercise Ideas</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
+                Receive personalized meal plans and safe exercise suggestions tailored to your pregnancy stage and preferences.
+              </p>
+              <Link to="/meals" className="mt-4 inline-flex items-center text-sm font-medium text-teal-500 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300">
+                Get ideas <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* Blockchain Stacking Game */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-cyan-500 dark:border-cyan-600">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-cyan-500 dark:bg-cyan-600 text-white mb-4">
+                <Gamepad2 className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Stacking Game (on Monad)</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
+                Play our fun stacking game, test your skills, and submit your high score to the Monad blockchain leaderboard.
+              </p>
+              <Link to="/games" className="mt-4 inline-flex items-center text-sm font-medium text-cyan-500 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300">
+                Play the game <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+
           </div>
         </div>
       </section>

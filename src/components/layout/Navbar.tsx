@@ -120,6 +120,9 @@ const Navbar = () => {
                     <DropdownMenuItem onClick={() => navigate('/medicaldocs')}>
                       Medical Documents
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/games')}>
+                      Games
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       Log out
@@ -220,6 +223,13 @@ const Navbar = () => {
                   onClick={toggleMenu}
                 >
                   Medical Documents
+                </Link>
+                <Link
+                  to="/games"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-momcare-primary"
+                  onClick={toggleMenu}
+                >
+                  Games
                 </Link>
                 <Link
               to="/appointment"
