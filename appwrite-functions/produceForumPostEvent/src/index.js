@@ -1,4 +1,4 @@
-// produceForumPostEvent/src/index.js
+//produceForumPostEvent/src/index.js
 
 const WebSocket = require('ws'); // Use the standard WebSocket client library
 const sdk = require('node-appwrite');
