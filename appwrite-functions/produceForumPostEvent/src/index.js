@@ -17,8 +17,8 @@ module.exports = async ({ req, res, log, error }) => {
     log('produceForumPostEvent function triggered.'); // Log entry immediately
 
     // --- Detailed Request Logging ---
-    const eventType = req.headers['x-appwrite-event'];
-    log(`Event Type: ${eventType}`);
+    const eventType = req.headers['x-appwrite-event']; // Get the specific event header
+    log(`Event Type Header: ${eventType}`);
     log(`Raw Payload Type: ${typeof req.payload}`);
     log(`Raw Payload Value: ${req.payload}`); // Log the raw payload
 
@@ -50,11 +50,12 @@ module.exports = async ({ req, res, log, error }) => {
     let ws; // WebSocket instance variable
 
     try {
-        // --- Get Document ID from Event Header ---
+        // --- Get Document ID and Action from Event Header ---
         // Example event: databases.[DB_ID].collections.[COLL_ID].documents.[DOC_ID].create
         const eventParts = eventType?.split('.') ?? [];
-        const documentId = eventParts.length >= 5 ? eventParts[4] : null;
-        const action = eventParts.length >= 6 ? eventParts[5] : null; // create, update, delete
+        // Correct indices: ID is at index 4, Action is at index 5
+        const documentId = eventParts.length > 4 ? eventParts[4] : null;
+        const action = eventParts.length > 5 ? eventParts[5] : null;
 
         // This function should only react to 'create' events for posts
         if (action !== 'create') {
@@ -66,7 +67,8 @@ module.exports = async ({ req, res, log, error }) => {
             error(`Could not extract document ID from event header: ${eventType}`);
             return res.json({ success: false, error: 'Could not identify document from event.' }, 400);
         }
-        log(`Extracted document ID from event: ${documentId}`);
+        log(`Extracted document ID: ${documentId}, Action: ${action}`);
+
 
         // --- Fetch the Post Document Manually ---
         // Since the payload might be missing, fetch the document using the ID
@@ -77,7 +79,7 @@ module.exports = async ({ req, res, log, error }) => {
             log(`Fetched post document successfully.`); // Don't log full content unless debugging
         } catch (fetchError) {
             error(`Error fetching post document ${documentId}: ${fetchError.message}`);
-            // If fetch fails even on create, something is wrong (permissions, timing?)
+            // If fetch fails even on create, something is wrong (permissions?)
             if (fetchError.response) {
                  error(`Appwrite fetch error details: ${safeJsonStringify(fetchError.response)}`);
             }
