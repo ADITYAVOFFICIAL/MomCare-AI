@@ -2,15 +2,16 @@
     "name": "produce-forum-vote-event",
     "version": "1.0.0",
     "description": "Appwrite function to send forum vote events to Fluvio.",
-    "main": "src/index.js",    "scripts": {
-      "test": "echo \"Error: no test specified\" && exit 1"
+    "main": "src/index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
     },
     "author": "",
     "license": "ISC",
     "dependencies": {
-      "@fluvio/client": "^0.14.9", 
-      "node-appwrite": "^13.0.0",
-      "typescript": "^5.4.5",
-      "@types/node": "^18.19.34"
+        "@types/node": "^18.19.34",
+        "node-appwrite": "^13.0.0",
+        "typescript": "^5.4.5",
+        "ws": "^8.18.1"
     }
-  }
+}

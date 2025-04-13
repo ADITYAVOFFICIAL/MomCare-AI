@@ -1,112 +1,146 @@
 // produceForumPostEvent/src/index.js
 
-// Use require for CommonJS environment
-const { default: Fluvio } = require('@fluvio/client'); // Correct import for default export
+const WebSocket = require('ws'); // Use the standard WebSocket client library
 const sdk = require('node-appwrite');
 
 // Helper to safely stringify JSON
 const safeJsonStringify = (obj) => {
      try { return JSON.stringify(obj); }
-     catch (e) { console.error("Stringify Error:", e); return null; }
+     catch (e) {
+         // Use console.error directly as 'error' function might not be available here
+         console.error("Stringify Error:", e);
+         return null;
+     }
 };
 
 module.exports = async ({ req, res, log, error }) => {
     // --- Appwrite Setup ---
     const client = new sdk.Client();
+    // No need for Databases service here unless you need to fetch extra data
     const APPWRITE_ENDPOINT = process.env.APPWRITE_ENDPOINT;
     const APPWRITE_PROJECT_ID = process.env.APPWRITE_PROJECT_ID;
     const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
 
+    // --- Configuration Validation ---
     if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID || !APPWRITE_API_KEY) {
-        error('Missing Appwrite environment variables.');
+        error('Missing Appwrite environment variables (ENDPOINT, PROJECT_ID, API_KEY).');
         return res.json({ success: false, error: 'Appwrite configuration missing.' }, 500);
     }
     client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID).setKey(APPWRITE_API_KEY);
 
-    // --- Fluvio Setup ---
-    let fluvioClientInstance; // Use a different variable name to avoid conflict with class name
+    // --- Fluvio Gateway URL & Topic ---
     const FLUVIO_ACCESS_KEY = process.env.FLUVIO_ACCESS_KEY;
     if (!FLUVIO_ACCESS_KEY) {
         error('Missing Fluvio Access Key environment variable.');
         return res.json({ success: false, error: 'Fluvio configuration missing.' }, 500);
     }
     const fluvioGatewayUrl = `wss://infinyon.cloud/wsr/v1/fluvio?access_key=${FLUVIO_ACCESS_KEY}`;
-    const FLUVIO_TARGET_TOPIC = 'forum-posts'; // Define target topic
+    const FLUVIO_TARGET_TOPIC = 'forum-posts'; // Correct topic for post events
+
+    let ws; // WebSocket instance variable
 
     try {
         log('produceForumPostEvent function triggered.');
 
-        // Ensure payload exists and is parsed
         if (!req.payload) {
              error('Request payload is missing.');
              return res.json({ success: false, error: 'Missing event payload.' }, 400);
         }
-        const payload = JSON.parse(req.payload);
-        log(`Processing event for document ID: ${payload.$id}`);
+        const payload = JSON.parse(req.payload); // The ForumPost document data
+        log(`Processing event for post document ID: ${payload.$id}`);
 
-        // Validate essential fields from the payload (adjust based on your actual ForumPost structure)
+        // Validate essential fields from the post payload
         if (!payload.$id || !payload.topicId || !payload.userId || !payload.content || !payload.$createdAt) {
-            error('Payload missing essential fields ($id, topicId, userId, content, $createdAt). Payload:', safeJsonStringify(payload));
-            return res.json({ success: false, error: 'Missing essential data in payload.' }, 400);
+            error('Post payload missing essential fields ($id, topicId, userId, content, $createdAt). Payload:', safeJsonStringify(payload));
+            return res.json({ success: false, error: 'Missing essential post data in payload.' }, 400);
         }
 
         // --- Prepare Event Data ---
-        // Send the *entire* post document data as the payload
-        // The backend service expects the full ForumPost structure
+        // We want to send the full post data so the frontend doesn't need to re-fetch
         const eventData = {
-            // You could add an explicit type field if needed, but often the topic name is sufficient
-            // type: 'new_post',
+            // type: 'new_post', // Type is implicit via topic/handled by backend consumer
             ...payload // Spread the entire Appwrite document payload
         };
 
         const eventDataString = safeJsonStringify(eventData);
         if (!eventDataString) {
-             error('Failed to stringify event data.');
-             return res.json({ success: false, error: 'Internal error stringifying data.'}, 500);
+             error('Failed to stringify post event data.');
+             return res.json({ success: false, error: 'Internal error stringifying post data.'}, 500);
         }
 
-        // --- Connect to Fluvio ---
-        log(`Connecting to Fluvio WebSocket Gateway...`);
-        // Use the connection method identified earlier: { addr: url }
-        const connectOptions = { addr: fluvioGatewayUrl };
-        // Connect using the options object
-        fluvioClientInstance = await Fluvio.connect(connectOptions);
-        log('Connected to Fluvio Gateway.');
+        // --- Connect and Send via WebSocket ---
+        log(`Connecting to Fluvio Gateway via standard WebSocket: ${fluvioGatewayUrl}`);
 
-        // --- Produce to Fluvio ---
-        const producer = await fluvioClientInstance.topicProducer(FLUVIO_TARGET_TOPIC);
-        log(`Got producer for topic: ${FLUVIO_TARGET_TOPIC}.`);
+        await new Promise((resolve, reject) => {
+            let connectionTimeout;
+            try {
+                ws = new WebSocket(fluvioGatewayUrl);
 
-        // Send the stringified full post data
-        // Key can be null, or use postId/topicId if partitioning is relevant later
-        await producer.send(payload.$id, eventDataString); // Using postId as key example
-        log(`Sent event to Fluvio topic '${FLUVIO_TARGET_TOPIC}' for post ID: ${payload.$id}`);
+                ws.on('open', () => {
+                    clearTimeout(connectionTimeout); // Clear timeout on successful open
+                    log('WebSocket connection opened to Fluvio Gateway.');
+                    try {
+                        // Construct the message Fluvio Gateway expects: Topic\nPayload
+                        const messageToSend = `${FLUVIO_TARGET_TOPIC}\n${eventDataString}`;
+                        ws.send(messageToSend);
+                        log(`Sent new_post event via WebSocket for post ID: ${payload.$id}`);
+                        // Close connection after sending
+                        ws.close(1000, "Message sent");
+                        resolve(); // Resolve the promise on successful send
+                    } catch (sendError) {
+                         error(`WebSocket send error: ${sendError.message}`);
+                         if (ws && ws.readyState !== WebSocket.CLOSED) ws.close(1011, "Send error");
+                         reject(sendError); // Reject the promise
+                    }
+                });
 
-        return res.json({ success: true, message: 'Event sent successfully.' });
+                ws.on('error', (err) => {
+                    clearTimeout(connectionTimeout);
+                    error(`WebSocket error: ${err.message}`);
+                    if (ws && ws.readyState !== WebSocket.CLOSED) ws.close(1011, "WebSocket error");
+                    reject(err); // Reject the promise
+                });
+
+                ws.on('close', (code, reason) => {
+                    clearTimeout(connectionTimeout);
+                    const reasonString = reason?.toString() || 'No reason provided';
+                    log(`WebSocket closed. Code: ${code}, Reason: ${reasonString}`);
+                    // If code is not 1000 (Normal Closure), consider it an error if not already handled
+                    if (code !== 1000 && code !== 1005 /* No Status Received */) {
+                         // Avoid rejecting if already resolved/rejected
+                         reject(new Error(`WebSocket closed unexpectedly with code ${code}: ${reasonString}`));
+                    }
+                    // If resolved previously in 'open', this is fine.
+                });
+
+                 // Timeout for the connection attempt
+                 connectionTimeout = setTimeout(() => {
+                     error("WebSocket connection timed out.");
+                     if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
+                        ws.terminate();
+                     }
+                     reject(new Error("WebSocket connection timeout"));
+                 }, 10000); // 10 seconds
+
+            } catch (initError) {
+                 // Catch errors during WebSocket constructor itself
+                 error(`WebSocket initialization error: ${initError.message}`);
+                 reject(initError);
+            }
+
+        }); // End of Promise
+
+        log(`Successfully processed post event for post ${payload.$id}`);
+        return res.json({ success: true, message: 'Post event sent via WebSocket.' });
 
     } catch (err) {
-        // Log specific Fluvio errors if possible
         error(`Error in produceForumPostEvent: ${err.message || 'Unknown error'}`);
-        if (err.stack) {
-             error(err.stack);
-        } else {
-             error(JSON.stringify(err)); // Log the error object if no stack
+        if (err.stack) error(err.stack);
+        // Ensure WS is closed if an error occurred before or during the promise
+        if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
+            ws.close(1011, "Function error");
         }
-        return res.json({ success: false, error: err.message || 'Failed to process event.' }, 500);
-    } finally {
-        // --- Disconnect Fluvio ---
-        if (fluvioClientInstance) {
-            try {
-                // Appwrite functions might time out before disconnect finishes,
-                // but it's good practice to attempt it.
-                // The Fluvio class itself doesn't have disconnect, clear the reference.
-                // await fluvioClientInstance.disconnect(); // This method likely doesn't exist
-                fluvioClientInstance = null; // Clear reference
-                log('Cleared Fluvio client reference.');
-            } catch (disconnectErr) {
-                // Log disconnect errors but don't fail the function execution
-                error(`Error during Fluvio cleanup: ${disconnectErr.message}`);
-            }
-        }
+        return res.json({ success: false, error: err.message || 'Failed to process post event.' }, 500);
     }
+    // No finally block needed for ws.close as it's handled within the promise/catch
 };
