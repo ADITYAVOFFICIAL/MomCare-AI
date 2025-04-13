@@ -17,6 +17,7 @@ const safeJsonStringify = (obj) => {
 // Note: This requires indexes on targetId and voteType in your forumVotes collection
 // Pass log/error from the main function context
 const getVoteCounts = async (databases, databaseId, votesCollectionId, targetId, log, error) => {
+    // Basic validation of inputs to the helper
     if (!databases || !databaseId || !votesCollectionId || !targetId) {
          error("getVoteCounts missing required parameters.");
          throw new Error("Internal configuration error in getVoteCounts.");
@@ -24,11 +25,12 @@ const getVoteCounts = async (databases, databaseId, votesCollectionId, targetId,
     try {
         log(`Fetching vote counts for targetId: ${targetId}`);
         // Count upvotes
-        const upvoteQuery = [sdk.Query.equal('targetId', targetId), sdk.Query.equal('voteType', 'up'), sdk.Query.limit(1)]; // limit(1) gets total count efficiently
+        // Use limit(1) to get total count efficiently without fetching all documents
+        const upvoteQuery = [sdk.Query.equal('targetId', targetId), sdk.Query.equal('voteType', 'up'), sdk.Query.limit(1)];
         const upvotesResult = await databases.listDocuments(databaseId, votesCollectionId, upvoteQuery);
 
         // Count downvotes
-        const downvoteQuery = [sdk.Query.equal('targetId', targetId), sdk.Query.equal('voteType', 'down'), sdk.Query.limit(1)]; // limit(1) gets total count efficiently
+        const downvoteQuery = [sdk.Query.equal('targetId', targetId), sdk.Query.equal('voteType', 'down'), sdk.Query.limit(1)];
         const downvotesResult = await databases.listDocuments(databaseId, votesCollectionId, downvoteQuery);
 
         const counts = {
@@ -40,6 +42,10 @@ const getVoteCounts = async (databases, databaseId, votesCollectionId, targetId,
         return counts;
     } catch (countError) {
         error(`Error fetching vote counts for target ${targetId}: ${countError.message}`);
+        // Log the specific Appwrite error if available
+        if (countError.response) {
+            error(`Appwrite vote count error details: ${safeJsonStringify(countError.response)}`);
+        }
         throw countError; // Re-throw to be caught by the main handler
     }
 };
@@ -49,8 +55,8 @@ module.exports = async ({ req, res, log, error }) => {
     log('produceForumVoteEvent function triggered.'); // Log entry immediately
 
     // --- Detailed Request Logging ---
-    log(`Request Method: ${req.method}`);
-    log(`Request Headers: ${safeJsonStringify(req.headers)}`);
+    const eventType = req.headers['x-appwrite-event'];
+    log(`Event Type: ${eventType}`);
     log(`Raw Payload Type: ${typeof req.payload}`);
     log(`Raw Payload Value: ${req.payload}`); // Log the raw payload
 
@@ -82,33 +88,61 @@ module.exports = async ({ req, res, log, error }) => {
     let ws; // WebSocket instance variable
 
     try {
-        // --- Payload Parsing and Validation ---
-        let payload;
-        if (req.payload && typeof req.payload === 'string' && req.payload.trim() !== '') {
-            try {
-                payload = JSON.parse(req.payload);
-                log(`Parsed Payload: ${safeJsonStringify(payload)}`);
-            } catch (parseError) {
-                error(`Failed to parse req.payload JSON: ${parseError.message}. Raw payload: ${req.payload}`);
-                return res.json({ success: false, error: 'Invalid event payload format.' }, 400);
-            }
+        // --- Get Document ID and Target Info ---
+        // Appwrite event format: databases.[DB_ID].collections.[COLL_ID].documents.[DOC_ID].[ACTION]
+        const eventParts = eventType?.split('.') ?? [];
+        const documentId = eventParts.length >= 5 ? eventParts[4] : null;
+        const action = eventParts.length >= 6 ? eventParts[5] : null; // create, update, delete
+
+        if (!documentId) {
+            error(`Could not extract document ID from event header: ${eventType}`);
+            return res.json({ success: false, error: 'Could not identify document from event.' }, 400);
+        }
+        log(`Extracted document ID from event: ${documentId}, Action: ${action}`);
+
+        let targetId;
+        let targetType;
+
+        // --- Fetch Document Data (Crucial Step) ---
+        // We need targetId and targetType. If the payload is missing, we MUST fetch the document.
+        // For 'delete' events, the document might already be gone.
+        let voteDocument;
+        if (action !== 'delete') {
+             try {
+                 log(`Fetching vote document: ${documentId}`);
+                 voteDocument = await databases.getDocument(APPWRITE_DATABASE_ID, FORUM_VOTES_COLLECTION_ID, documentId);
+                 log(`Fetched vote document: ${safeJsonStringify(voteDocument)}`);
+                 targetId = voteDocument.targetId;
+                 targetType = voteDocument.targetType;
+             } catch (fetchError) {
+                 if (fetchError.code === 404) {
+                     // Document might have been deleted very quickly after update/create trigger? Unlikely but possible.
+                     error(`Vote document ${documentId} not found even though event was ${action}. Skipping Fluvio event.`);
+                     return res.json({ success: true, message: 'Document not found, skipping event.' });
+                 }
+                 error(`Error fetching vote document ${documentId}: ${fetchError.message}`);
+                 throw fetchError; // Rethrow other fetch errors
+             }
         } else {
-            // Handle cases where payload might be missing for certain events (like delete?)
-            // For votes, we generally expect a payload on create/update/delete
-            error('Request payload is missing, empty, or not a string.');
-            return res.json({ success: false, error: 'Missing event payload.' }, 400);
+             log(`Handling delete event for document ${documentId}. Cannot fetch deleted doc.`);
+             // PROBLEM: If payload is empty on delete, we don't know targetId/targetType easily.
+             // WORKAROUND NEEDED: Either ensure payload IS sent (fix permissions/settings)
+             // OR store targetId/targetType redundantly if critical, OR parse from event string (fragile).
+             // For now, we'll fail gracefully if we can't get the info for delete.
+             error(`Cannot process delete event ${documentId} without payload or alternative way to get targetId/targetType.`);
+             return res.json({ success: false, error: 'Cannot process delete event without payload.' }, 400);
+             // If you could somehow get targetId/Type for delete events:
+             // targetId = extractedTargetId;
+             // targetType = extractedTargetType;
         }
 
-        // Validate essential fields *after* successful parsing
-        // These fields are expected from the vote document itself
-        if (!payload || !payload.$id || !payload.targetId || !payload.targetType || !payload.userId) {
-            error('Parsed payload missing essential fields ($id, targetId, targetType, userId).');
-            return res.json({ success: false, error: 'Missing essential vote data in payload.' }, 400);
+        // Validate essential fields obtained from the fetched document
+        if (!targetId || !targetType) {
+            error('Could not determine targetId or targetType for the vote event.');
+            return res.json({ success: false, error: 'Missing target information for vote.' }, 500); // Internal error state
         }
-        log(`Processing valid vote event for vote ID: ${payload.$id}, target ID: ${payload.targetId}`);
+        log(`Processing valid vote event for vote ID: ${documentId}, target ID: ${targetId}, target type: ${targetType}`);
 
-        const targetId = payload.targetId;
-        const targetType = payload.targetType;
 
         // --- Recalculate Vote Counts ---
         // This ensures the broadcasted message reflects the *current* state after the change
@@ -136,42 +170,35 @@ module.exports = async ({ req, res, log, error }) => {
                 ws = new WebSocket(fluvioGatewayUrl);
 
                 ws.on('open', () => {
-                    clearTimeout(connectionTimeout); // Clear timeout on successful open
+                    clearTimeout(connectionTimeout);
                     log('WebSocket connection opened to Fluvio Gateway.');
                     try {
-                        // Construct the message Fluvio Gateway expects: Topic\nPayload
                         const messageToSend = `${FLUVIO_TARGET_TOPIC}\n${eventDataString}`;
                         ws.send(messageToSend);
                         log(`Sent vote_update event via WebSocket for target ID: ${targetId}`);
-                        // Close connection after sending
-                        ws.close(1000, "Message sent");
-                        resolve(); // Resolve the promise on successful send
+                        ws.close(1000, "Message sent"); // Close normally after sending
+                        resolve(); // Success
                     } catch (sendError) {
                          error(`WebSocket send error: ${sendError.message}`);
                          if (ws && ws.readyState !== WebSocket.CLOSED) ws.close(1011, "Send error");
-                         reject(sendError); // Reject the promise
+                         reject(sendError);
                     }
                 });
 
                 ws.on('error', (err) => {
                     clearTimeout(connectionTimeout);
                     error(`WebSocket error: ${err.message}`);
-                    // Ensure close is attempted even on error before open
-                    if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
-                       ws.close(1011, "WebSocket error");
-                    }
-                    reject(err); // Reject the promise
+                    if (ws && ws.readyState !== WebSocket.CLOSED) ws.close(1011, "WebSocket error");
+                    reject(err);
                 });
 
                 ws.on('close', (code, reason) => {
                     clearTimeout(connectionTimeout);
                     const reasonString = reason?.toString() || 'No reason provided';
                     log(`WebSocket closed. Code: ${code}, Reason: ${reasonString}`);
-                    // If the promise wasn't resolved (e.g., closed before open/send), reject it.
-                    // If code is not 1000 (Normal Closure), consider it an error.
+                    // If code is not 1000 (Normal Closure), consider it an error if not already handled
                     if (code !== 1000 && code !== 1005 /* No Status Received */) {
                          // Avoid rejecting if already resolved/rejected
-                         // A simple check might be needed if the promise could resolve *and* close fires later
                          reject(new Error(`WebSocket closed unexpectedly with code ${code}: ${reasonString}`));
                     }
                     // If resolved previously in 'open', this is fine.
@@ -181,10 +208,10 @@ module.exports = async ({ req, res, log, error }) => {
                  connectionTimeout = setTimeout(() => {
                      error("WebSocket connection timed out.");
                      if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
-                        ws.terminate(); // Force close
+                        ws.terminate();
                      }
                      reject(new Error("WebSocket connection timeout"));
-                 }, 10000); // 10 second timeout
+                 }, 10000); // 10 seconds
 
             } catch (initError) {
                  // Catch errors during WebSocket constructor itself
@@ -207,5 +234,4 @@ module.exports = async ({ req, res, log, error }) => {
         // Return 500 for internal errors during processing
         return res.json({ success: false, error: err.message || 'Failed to process vote event.' }, 500);
     }
-    // No finally block needed for ws.close as it's handled within the promise/catch
 };

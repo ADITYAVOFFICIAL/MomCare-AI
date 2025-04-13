@@ -17,22 +17,24 @@ module.exports = async ({ req, res, log, error }) => {
     log('produceForumPostEvent function triggered.'); // Log entry immediately
 
     // --- Detailed Request Logging ---
-    log(`Request Method: ${req.method}`);
-    log(`Request Headers: ${safeJsonStringify(req.headers)}`);
+    const eventType = req.headers['x-appwrite-event'];
+    log(`Event Type: ${eventType}`);
     log(`Raw Payload Type: ${typeof req.payload}`);
     log(`Raw Payload Value: ${req.payload}`); // Log the raw payload
 
     // --- Appwrite Setup ---
     const client = new sdk.Client();
-    // No need for Databases service here unless fetching extra user info, etc.
+    const databases = new sdk.Databases(client); // Initialize Databases service
     const APPWRITE_ENDPOINT = process.env.APPWRITE_ENDPOINT;
     const APPWRITE_PROJECT_ID = process.env.APPWRITE_PROJECT_ID;
     const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
+    const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID; // Need the Database ID
+    const FORUM_POSTS_COLLECTION_ID = process.env.FORUM_POSTS_COLLECTION_ID; // Need Posts Collection ID
 
     // --- Configuration Validation ---
-    if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID || !APPWRITE_API_KEY) {
-        error('Missing Appwrite environment variables (ENDPOINT, PROJECT_ID, API_KEY).');
-        return res.json({ success: false, error: 'Appwrite configuration missing.' }, 500);
+    if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID || !APPWRITE_API_KEY || !APPWRITE_DATABASE_ID || !FORUM_POSTS_COLLECTION_ID) {
+        error('Missing Appwrite environment variables (ENDPOINT, PROJECT_ID, API_KEY, DATABASE_ID, FORUM_POSTS_COLLECTION_ID).');
+        return res.json({ success: false, error: 'Appwrite configuration missing.' }, 500); // Use 500 for config errors
     }
     client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID).setKey(APPWRITE_API_KEY);
 
@@ -48,33 +50,53 @@ module.exports = async ({ req, res, log, error }) => {
     let ws; // WebSocket instance variable
 
     try {
-        // --- Payload Parsing and Validation ---
-        let payload;
-        if (req.payload && typeof req.payload === 'string' && req.payload.trim() !== '') {
-            try {
-                payload = JSON.parse(req.payload); // The ForumPost document data
-                log(`Parsed Payload: ${safeJsonStringify(payload)}`);
-            } catch (parseError) {
-                error(`Failed to parse req.payload JSON: ${parseError.message}. Raw payload: ${req.payload}`);
-                return res.json({ success: false, error: 'Invalid event payload format.' }, 400);
-            }
-        } else {
-            error('Request payload is missing, empty, or not a string.');
-            return res.json({ success: false, error: 'Missing event payload.' }, 400);
+        // --- Get Document ID from Event Header ---
+        // Example event: databases.[DB_ID].collections.[COLL_ID].documents.[DOC_ID].create
+        const eventParts = eventType?.split('.') ?? [];
+        const documentId = eventParts.length >= 5 ? eventParts[4] : null;
+        const action = eventParts.length >= 6 ? eventParts[5] : null; // create, update, delete
+
+        // This function should only react to 'create' events for posts
+        if (action !== 'create') {
+             log(`Ignoring event action '${action}' for produceForumPostEvent.`);
+             return res.json({ success: true, message: `Ignoring action: ${action}` });
         }
 
-        // Validate essential fields from the post payload
-        if (!payload || !payload.$id || !payload.topicId || !payload.userId || !payload.content || !payload.$createdAt) {
-            error('Parsed payload missing essential fields ($id, topicId, userId, content, $createdAt).');
-            return res.json({ success: false, error: 'Missing essential post data in payload.' }, 400);
+        if (!documentId) {
+            error(`Could not extract document ID from event header: ${eventType}`);
+            return res.json({ success: false, error: 'Could not identify document from event.' }, 400);
         }
-        log(`Processing valid post event for post ID: ${payload.$id}`);
+        log(`Extracted document ID from event: ${documentId}`);
+
+        // --- Fetch the Post Document Manually ---
+        // Since the payload might be missing, fetch the document using the ID
+        let postDocument;
+        try {
+            log(`Fetching post document: ${documentId}`);
+            postDocument = await databases.getDocument(APPWRITE_DATABASE_ID, FORUM_POSTS_COLLECTION_ID, documentId);
+            log(`Fetched post document successfully.`); // Don't log full content unless debugging
+        } catch (fetchError) {
+            error(`Error fetching post document ${documentId}: ${fetchError.message}`);
+            // If fetch fails even on create, something is wrong (permissions, timing?)
+            if (fetchError.response) {
+                 error(`Appwrite fetch error details: ${safeJsonStringify(fetchError.response)}`);
+            }
+            throw fetchError; // Rethrow fetch errors to be caught by the main handler
+        }
+
+        // --- Validate Fetched Document ---
+        // Ensure the fetched document has the necessary fields
+        if (!postDocument || !postDocument.$id || !postDocument.topicId || !postDocument.userId || !postDocument.content || !postDocument.$createdAt) {
+            error('Fetched post document missing essential fields ($id, topicId, userId, content, $createdAt).');
+            return res.json({ success: false, error: 'Fetched post data invalid.' }, 500); // Internal error state
+        }
+        log(`Processing valid post event for post ID: ${postDocument.$id}`);
 
         // --- Prepare Event Data ---
-        // We want to send the full post data so the frontend doesn't need to re-fetch
+        // Use the fetched document data as the payload
         const eventData = {
             // type: 'new_post', // Type is implicit via topic/handled by backend consumer
-            ...payload // Spread the entire Appwrite document payload
+            ...postDocument // Spread the entire fetched Appwrite document payload
         };
         const eventDataString = safeJsonStringify(eventData);
         if (!eventDataString) {
@@ -91,13 +113,13 @@ module.exports = async ({ req, res, log, error }) => {
                 ws = new WebSocket(fluvioGatewayUrl);
 
                 ws.on('open', () => {
-                    clearTimeout(connectionTimeout); // Clear timeout on successful open
+                    clearTimeout(connectionTimeout);
                     log('WebSocket connection opened to Fluvio Gateway.');
                     try {
                         // Construct the message Fluvio Gateway expects: Topic\nPayload
                         const messageToSend = `${FLUVIO_TARGET_TOPIC}\n${eventDataString}`;
                         ws.send(messageToSend);
-                        log(`Sent new_post event via WebSocket for post ID: ${payload.$id}`);
+                        log(`Sent new_post event via WebSocket for post ID: ${postDocument.$id}`);
                         // Close connection after sending
                         ws.close(1000, "Message sent");
                         resolve(); // Resolve the promise on successful send
@@ -147,7 +169,7 @@ module.exports = async ({ req, res, log, error }) => {
 
         }); // End of Promise
 
-        log(`Successfully processed post event for post ${payload.$id}`);
+        log(`Successfully processed post event for post ${postDocument.$id}`);
         return res.json({ success: true, message: 'Post event sent via WebSocket.' });
 
     } catch (err) {
@@ -160,5 +182,4 @@ module.exports = async ({ req, res, log, error }) => {
         // Return 500 for internal errors during processing
         return res.json({ success: false, error: err.message || 'Failed to process post event.' }, 500);
     }
-    // No finally block needed for ws.close as it's handled within the promise/catch
 };
