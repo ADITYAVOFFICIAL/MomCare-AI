@@ -1,4 +1,4 @@
-//produceForumPostEvent/src/index.js
+// produceForumPostEvent/src/index.js
 
 const WebSocket = require('ws'); // Use the standard WebSocket client library
 const sdk = require('node-appwrite');
@@ -14,9 +14,17 @@ const safeJsonStringify = (obj) => {
 };
 
 module.exports = async ({ req, res, log, error }) => {
+    log('produceForumPostEvent function triggered.'); // Log entry immediately
+
+    // --- Detailed Request Logging ---
+    log(`Request Method: ${req.method}`);
+    log(`Request Headers: ${safeJsonStringify(req.headers)}`);
+    log(`Raw Payload Type: ${typeof req.payload}`);
+    log(`Raw Payload Value: ${req.payload}`); // Log the raw payload
+
     // --- Appwrite Setup ---
     const client = new sdk.Client();
-    // No need for Databases service here unless you need to fetch extra data
+    // No need for Databases service here unless fetching extra user info, etc.
     const APPWRITE_ENDPOINT = process.env.APPWRITE_ENDPOINT;
     const APPWRITE_PROJECT_ID = process.env.APPWRITE_PROJECT_ID;
     const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
@@ -40,20 +48,27 @@ module.exports = async ({ req, res, log, error }) => {
     let ws; // WebSocket instance variable
 
     try {
-        log('produceForumPostEvent function triggered.');
-
-        if (!req.payload) {
-             error('Request payload is missing.');
-             return res.json({ success: false, error: 'Missing event payload.' }, 400);
+        // --- Payload Parsing and Validation ---
+        let payload;
+        if (req.payload && typeof req.payload === 'string' && req.payload.trim() !== '') {
+            try {
+                payload = JSON.parse(req.payload); // The ForumPost document data
+                log(`Parsed Payload: ${safeJsonStringify(payload)}`);
+            } catch (parseError) {
+                error(`Failed to parse req.payload JSON: ${parseError.message}. Raw payload: ${req.payload}`);
+                return res.json({ success: false, error: 'Invalid event payload format.' }, 400);
+            }
+        } else {
+            error('Request payload is missing, empty, or not a string.');
+            return res.json({ success: false, error: 'Missing event payload.' }, 400);
         }
-        const payload = JSON.parse(req.payload); // The ForumPost document data
-        log(`Processing event for post document ID: ${payload.$id}`);
 
         // Validate essential fields from the post payload
-        if (!payload.$id || !payload.topicId || !payload.userId || !payload.content || !payload.$createdAt) {
-            error('Post payload missing essential fields ($id, topicId, userId, content, $createdAt). Payload:', safeJsonStringify(payload));
+        if (!payload || !payload.$id || !payload.topicId || !payload.userId || !payload.content || !payload.$createdAt) {
+            error('Parsed payload missing essential fields ($id, topicId, userId, content, $createdAt).');
             return res.json({ success: false, error: 'Missing essential post data in payload.' }, 400);
         }
+        log(`Processing valid post event for post ID: ${payload.$id}`);
 
         // --- Prepare Event Data ---
         // We want to send the full post data so the frontend doesn't need to re-fetch
@@ -61,7 +76,6 @@ module.exports = async ({ req, res, log, error }) => {
             // type: 'new_post', // Type is implicit via topic/handled by backend consumer
             ...payload // Spread the entire Appwrite document payload
         };
-
         const eventDataString = safeJsonStringify(eventData);
         if (!eventDataString) {
              error('Failed to stringify post event data.');
@@ -97,7 +111,10 @@ module.exports = async ({ req, res, log, error }) => {
                 ws.on('error', (err) => {
                     clearTimeout(connectionTimeout);
                     error(`WebSocket error: ${err.message}`);
-                    if (ws && ws.readyState !== WebSocket.CLOSED) ws.close(1011, "WebSocket error");
+                    // Ensure close is attempted even on error before open
+                    if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
+                       ws.close(1011, "WebSocket error");
+                    }
                     reject(err); // Reject the promise
                 });
 
@@ -117,7 +134,7 @@ module.exports = async ({ req, res, log, error }) => {
                  connectionTimeout = setTimeout(() => {
                      error("WebSocket connection timed out.");
                      if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
-                        ws.terminate();
+                        ws.terminate(); // Force close
                      }
                      reject(new Error("WebSocket connection timeout"));
                  }, 10000); // 10 seconds
@@ -140,6 +157,7 @@ module.exports = async ({ req, res, log, error }) => {
         if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
             ws.close(1011, "Function error");
         }
+        // Return 500 for internal errors during processing
         return res.json({ success: false, error: err.message || 'Failed to process post event.' }, 500);
     }
     // No finally block needed for ws.close as it's handled within the promise/catch
