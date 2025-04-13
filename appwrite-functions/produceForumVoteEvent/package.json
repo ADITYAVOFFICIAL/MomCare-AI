@@ -9,6 +9,7 @@
     "license": "ISC",
     "dependencies": {
       "@fluvio/client": "^0.14.9", 
-      "node-appwrite": "^13.0.0" 
+      "node-appwrite": "^13.0.0",
+      "typescript": "^5.4.5" 
     }
   }
