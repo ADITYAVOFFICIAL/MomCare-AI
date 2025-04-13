@@ -27,6 +27,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import EditBlogPage from "./pages/EditBlogPage";
 import ForumPage from "./pages/ForumPage";
 import ProductsPage from "./pages/ProductPage";
+import MealPage from "./pages/MealPage";
 import { Home } from "lucide-react";
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => {
             <Route path="/create-blog" element={<PrivateRoute><CreateBlogPage /></PrivateRoute>} />
             <Route path="/sup" element={<PrivateRoute><SupportVideoPage /></PrivateRoute>} />
             <Route path="/products" element={<PrivateRoute><ProductsPage /></PrivateRoute>} />
+            <Route path="/meals" element={<PrivateRoute><MealPage /></PrivateRoute>} />
             
             {/* Public routes that don't need redirects */}
             <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />

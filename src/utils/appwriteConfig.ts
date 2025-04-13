@@ -28,6 +28,7 @@ export const appwriteEnvConfig = {
   bookmarksCollectionId: import.meta.env.VITE_PUBLIC_APPWRITE_BOOKMARKS_COLLECTION_ID || 'bookmarks', // Example ID
   forumTopicsCollectionId: import.meta.env.VITE_PUBLIC_APPWRITE_FORUM_TOPICS_COLLECTION_ID || 'forumTopics', // << REPLACE/VERIFY ID
   forumPostsCollectionId: import.meta.env.VITE_PUBLIC_APPWRITE_FORUM_POSTS_COLLECTION_ID || 'forumPosts',   // << REPLACE/VERIFY ID
+  forumVotesCollectionId: import.meta.env.VITE_PUBLIC_APPWRITE_FORUM_VOTES_COLLECTION_ID || 'forumVotes',
   // Bucket IDs (Ensure these match your .env variables and Appwrite Console)
   profileBucketId: import.meta.env.VITE_PUBLIC_APPWRITE_PROFILE_BUCKET_ID || 'profilePhotos', // Example ID
   medicalBucketId: import.meta.env.VITE_PUBLIC_APPWRITE_MEDICAL_BUCKET_ID || 'medicalFiles', // Example ID
@@ -196,6 +197,7 @@ export const appwriteSchemaConfig = {
         { key: 'replyCount', type: 'integer', required: false, default: 0, min: 0, array: false, description: 'Number of replies to the topic' },
         { key: 'isLocked', type: 'boolean', required: false, default: false, array: false, description: 'Moderation: Topic is locked (no new replies)' },
         { key: 'isPinned', type: 'boolean', required: false, default: false, array: false, description: 'Moderation: Topic is pinned to the top' },
+        { key: 'voteScore', type: 'integer', required: false, default: 0, array: false, description: 'Aggregated score (up-down)' }, 
       ],
       indexes: [
         // Essential for sorting topics by recent activity (most common view)
@@ -208,29 +210,52 @@ export const appwriteSchemaConfig = {
         { key: 'userId_idx', type: 'key', attributes: ['userId'], orders: ['ASC'], description: 'Find topics created by a user' },
         // For searching topic titles
         { key: 'title_fulltext_idx', type: 'fulltext', attributes: ['title'], orders: [], description: 'Search topic titles' },
+        { key: 'voteScore_idx', type: 'key', attributes: ['voteScore'], orders: ['DESC'], description: 'Sort by vote score' }, // Added index for sorting
+        // *** NEW: Full-text indexes for search ***
+        { key: 'title_fulltext', type: 'fulltext', attributes: ['title'], orders: [], description: 'Search topic titles' },
+        { key: 'content_fulltext', type: 'fulltext', attributes: ['content'], orders: [], description: 'Search topic content' },
       ],
     },
 
     // --- NEW: Forum Posts (Replies) ---
     forumPosts: {
-      id: appwriteEnvConfig.forumPostsCollectionId, // Collection ID from Appwrite
+      id: appwriteEnvConfig.forumPostsCollectionId,
       name: 'Forum Posts',
       attributes: [
-        { key: 'topicId', type: 'string', required: true, size: 255, array: false, description: 'Document ID ($id) of the parent ForumTopic' },
-        { key: 'content', type: 'string', required: true, size: 65535, array: false, description: 'Content of the reply (max 64KB)' },
-        { key: 'userId', type: 'string', required: true, size: 255, array: false, description: 'Appwrite User ID ($id) of the replier' },
-        { key: 'userName', type: 'string', required: true, size: 255, array: false, description: 'Display name of the replier (snapshot)' },
-        { key: 'userAvatarUrl', type: 'string', required: false, size: 2048, array: false, description: 'URL of the replier\'s avatar (snapshot, optional)' },
-        // Optional: parentPostId for threaded replies (add later if needed)
-        // { key: 'parentPostId', type: 'string', required: false, size: 255, array: false, description: 'ID of the post being replied to (for threading)' },
+        { key: 'topicId', type: 'string', required: true, size: 255, array: false },
+        { key: 'content', type: 'string', required: true, size: 65535, array: false }, // Max 64KB
+        { key: 'userId', type: 'string', required: true, size: 255, array: false },
+        { key: 'userName', type: 'string', required: true, size: 255, array: false },
+        { key: 'userAvatarUrl', type: 'string', required: false, size: 2048, array: false },
+        { key: 'voteScore', type: 'integer', required: false, default: 0, array: false, description: 'Aggregated score (up-down)' }, // Added
       ],
       indexes: [
-        // Essential for fetching posts for a specific topic in order
-        { key: 'topicId_createdAt_asc_idx', type: 'key', attributes: ['topicId', '$createdAt'], orders: ['ASC', 'ASC'], description: 'Fetch posts for a topic chronologically' },
-        // For finding posts by a specific user
-        { key: 'userId_idx', type: 'key', attributes: ['userId'], orders: ['ASC'], description: 'Find posts created by a user' },
+        { key: 'topicId_createdAt_asc_idx', type: 'key', attributes: ['topicId', '$createdAt'], orders: ['ASC', 'ASC'] },
+        { key: 'userId_idx', type: 'key', attributes: ['userId'], orders: ['ASC'] },
+        // *** NEW: Full-text index for searching post content ***
+        { key: 'content_fulltext', type: 'fulltext', attributes: ['content'], orders: [], description: 'Search post content' },
+        // Optional: Index for sorting posts by score within a topic
+        { key: 'topicId_voteScore_idx', type: 'key', attributes: ['topicId', 'voteScore'], orders: ['ASC', 'DESC'] },
       ],
     },
+    forumVotes: {
+      id: appwriteEnvConfig.forumVotesCollectionId,
+      name: "Forum Votes",
+      attributes: [
+          { key: 'userId', type: 'string', required: true, size: 255, array: false, description: "Voting user's ID" },
+          { key: 'targetId', type: 'string', required: true, size: 255, array: false, description: "ID of the topic or post voted on" },
+          { key: 'targetType', type: 'string', required: true, size: 10, array: false, description: "'topic' or 'post'" },
+          { key: 'voteType', type: 'string', required: true, size: 4, array: false, description: "'up' or 'down'" },
+      ],
+      indexes: [
+          // Essential for checking if a user voted on a specific item (prevents duplicates)
+          { key: 'user_target_unique', type: 'unique', attributes: ['userId', 'targetId'], orders: ['ASC', 'ASC'], description: "Ensure one vote per user per target" },
+          // Essential for counting votes for a specific item
+          { key: 'target_vote_idx', type: 'key', attributes: ['targetId', 'voteType'], orders: ['ASC', 'ASC'], description: "Count up/down votes for a target" },
+          // Optional: Find all votes by a user
+          { key: 'user_idx', type: 'key', attributes: ['userId'], orders: ['ASC'] },
+      ],
+  },
     // --- NEW: Chat History ---
     chatHistory: {
       id: appwriteEnvConfig.chatHistoryCollectionId, // Collection ID from Appwrite

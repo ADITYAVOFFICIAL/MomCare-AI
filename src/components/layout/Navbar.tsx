@@ -74,9 +74,6 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:block">
             <div className="flex items-center space-x-4">
-              <Link to="/" className="text-gray-700 hover:text-momcare-primary px-3 py-2 rounded-md text-sm font-medium">
-                Home
-              </Link>
               <Link to="/chat" className="text-gray-700 hover:text-momcare-primary px-3 py-2 rounded-md text-sm font-medium">
                 Chat
               </Link>
@@ -92,10 +89,15 @@ const Navbar = () => {
               <Link to="/forum" className="text-gray-700 hover:text-momcare-primary px-3 py-2 rounded-md text-sm font-medium">
                 Forum
               </Link>
+              <Link to="/meals" className="text-gray-700 hover:text-momcare-primary px-3 py-2 rounded-md text-sm font-medium">
+              Meals & Exercies
+              </Link>
+              <Link to="/products" className="text-gray-700 hover:text-momcare-primary px-3 py-2 rounded-md text-sm font-medium">
+                Products
+              </Link>
               <Link to="/dashboard" className="text-gray-700 hover:text-momcare-primary px-3 py-2 rounded-md text-sm font-medium">
                 Dashboard
               </Link>
-
               {isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -176,6 +178,20 @@ const Navbar = () => {
                   onClick={toggleMenu}
                 >
                   Dashboard
+                </Link>
+                <Link
+                  to="/meals"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-momcare-primary"
+                  onClick={toggleMenu}
+                >
+                  Meals & Exercies
+                </Link>
+                <Link
+                  to="/products"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-momcare-primary"
+                  onClick={toggleMenu}
+                >
+                  Products
                 </Link>
                 <Link
               to="/chat"

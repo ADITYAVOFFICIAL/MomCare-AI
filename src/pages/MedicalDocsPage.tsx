@@ -242,7 +242,7 @@ const MedicalDocsPage = () => {
                   id="document-upload"
                   type="file"
                   onChange={handleFileChange}
-                  className="cursor-pointer file:mr-4 file:py-2 file:px-4
+                  className="cursor-pointer file:mr-4 file:py--1 file:px-4
                              file:rounded-full file:border-0
                              file:text-sm file:font-semibold
                              file:bg-momcare-light file:text-momcare-primary

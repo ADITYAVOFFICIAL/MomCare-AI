@@ -385,7 +385,10 @@ const ProfilePage = () => {
                                     <div className="space-y-4 w-full">
                                     <div className="space-y-2">
     <Label htmlFor="photo-upload">Upload New Photo</Label>
-    <Input id="photo-upload" type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handlePhotoChange} disabled={isUploading} />
+    <Input id="photo-upload" type="file" accept="image/jpeg,image/png,image/gif,image/webp" className='file:rounded-full file:border-0
+                             file:text-sm file:font-semibold
+                             file:bg-momcare-light file:text-momcare-primary
+                             hover:file:bg-momcare-primary/10' onChange={handlePhotoChange} disabled={isUploading} />
     <p className="text-xs text-gray-500">Accepted formats: JPG, PNG, GIF, WebP (max 5MB)</p>
 </div>
                                         {profilePhotoFile && (
