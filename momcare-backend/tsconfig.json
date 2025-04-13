@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+      "lib": ["ESNext"],
+      "module": "esnext",
+      "target": "esnext",
+      "moduleResolution": "bundler", // or "node" if preferred
+      "moduleDetection": "force",
+      "allowImportingTsExtensions": true,
+      "noEmit": true,
+      "composite": true,
+      "strict": true,
+      "downlevelIteration": true,
+      "skipLibCheck": true,
+      "jsx": "react-jsx", // Keep if using JSX, otherwise remove
+      "allowSyntheticDefaultImports": true,
+      "forceConsistentCasingInFileNames": true,
+      "allowJs": true,
+      "types": ["bun-types", "@types/ws"] // Include Bun types and WS types
+    },
+    // Ensure include only points to backend source files
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules", "dist"] // Exclude build output and deps
+  }

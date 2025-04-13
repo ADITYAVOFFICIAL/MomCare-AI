@@ -1,13 +1,13 @@
 // src/pages/ForumPage.tsx
-import React, { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, FormEvent, ChangeEvent, useRef } from 'react'; // Added useRef
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import {
-    MessageSquare, PlusCircle, List, Tag, Clock, User, Loader2, ArrowLeft, Send, Trash2, Edit, Lock, Unlock, Pin, PinOff, Search, ThumbsUp, ThumbsDown, Filter, Sparkles, X, ShieldAlert // Added ShieldAlert for moderation
+    MessageSquare, PlusCircle, List, Tag, Clock, User, Loader2, ArrowLeft, Send, Trash2, Edit, Lock, Unlock, Pin, PinOff, Search, ThumbsUp, ThumbsDown, Filter, Sparkles, X, ShieldAlert
 } from 'lucide-react';
-import debounce from 'lodash.debounce'; // For debouncing search input
-import ReactMarkdown, { Options as ReactMarkdownOptions } from 'react-markdown'; // Import ReactMarkdown
-import remarkGfm from 'remark-gfm'; // Import GFM plugin for tables, strikethrough etc.
+import debounce from 'lodash.debounce';
+import ReactMarkdown, { Options as ReactMarkdownOptions } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // --- UI & Layout ---
 import MainLayout from '@/components/layout/MainLayout';
@@ -35,14 +35,12 @@ import {
     getForumTopics, getForumTopic, getForumPosts,
     createForumTopic, createForumPost,
     deleteForumPost, deleteForumTopicAndPosts,
-    updateForumTopic, updateForumPost, // Keep update functions if needed later
+    updateForumTopic, updateForumPost,
     getUserProfile,
     castForumVote, getUserVoteStatus, getTargetVoteCounts
-} from '@/lib/appwrite';
-// *** Import AI Formatting Function ***
-import { formatContentWithGroq } from '@/lib/groqf';
-// *** Import AI Moderation Function & Types ***
-import { groqModService, ModerationDecision, ModerationFlag } from '@/lib/groqMod';
+} from '@/lib/appwrite'; // Assuming appwrite types/functions are correctly exported
+import { formatContentWithGroq } from '@/lib/groqf'; // Assuming groq formatting function exists
+import { groqModService, ModerationDecision, ModerationFlag } from '@/lib/groqMod'; // Assuming groq moderation service exists
 
 // --- Helper Functions ---
 const getInitials = (nameStr: string | undefined | null): string => {
@@ -63,9 +61,24 @@ const SEARCH_DEBOUNCE_MS = 500;
 const FORUM_CATEGORIES = [
     'All', 'General', 'Pregnancy', 'Childbirth', 'Postpartum', 'Nutrition', 'Exercise', 'Mental Health', 'Baby Care', 'Symptoms', 'Tips & Tricks'
 ];
+// Define backend WebSocket URL (use environment variable if needed)
+// Ensure VITE_PUBLIC_BACKEND_WS_URL is set in your .env.local or .env.development.local
+const BACKEND_WS_URL = import.meta.env.VITE_PUBLIC_BACKEND_WS_URL || 'ws://localhost:3001';
 
-// --- Type for Markdown rendering props ---
+// --- Type Definitions ---
 type AnchorProps = React.ClassAttributes<HTMLAnchorElement> & React.AnchorHTMLAttributes<HTMLAnchorElement> & { node?: any };
+// Type for messages received from backend WebSocket
+interface BackendWebSocketMessage {
+    type: 'new_post' | 'vote_update' | 'error' | 'info';
+    payload: any; // Ideally type this payload more strictly based on type
+}
+// Specific type for vote update payload
+type BackendVoteUpdatePayload = {
+    targetId: string;
+    targetType: 'topic' | 'post';
+    voteCounts: VoteCounts;
+};
+
 
 // ================================================
 // --- Sub-Components (VoteButton, TopicListItem, PostItem) ---
@@ -75,9 +88,9 @@ const VoteButton: React.FC<{
     direction: 'up' | 'down';
     count: number;
     userVote: UserVoteStatus;
-    isVoting: boolean; // Combined loading/voting state
+    isVoting: boolean;
     isAuthenticated: boolean;
-    onVote: (voteType: 'up' | 'down' | 'remove') => void; // Simplified handler
+    onVote: (voteType: 'up' | 'down' | 'remove') => void;
 }> = React.memo(({ direction, count, userVote, isVoting, isAuthenticated, onVote }) => {
     const Icon = direction === 'up' ? ThumbsUp : ThumbsDown;
     const isActive = userVote === direction;
@@ -128,13 +141,18 @@ const TopicListItem: React.FC<{
         };
         fetchVoteData();
         return () => { isMounted = false };
-    }, [isAuthenticated, currentUserId, topic.$id, topic.voteScore]);
+    }, [isAuthenticated, currentUserId, topic.$id]); // Removed topic.voteScore dependency here
+
+     useEffect(() => {
+        // Update local score if the prop changes (from WebSocket update in parent)
+        setVoteCounts(prev => ({ ...prev, score: topic.voteScore || 0 }));
+    }, [topic.voteScore]);
 
     const handleVote = async (voteType: 'up' | 'down' | 'remove') => {
         if (!isAuthenticated || isVoting || isLoadingVotes) return;
         setIsVoting(true);
         const previousStatus = voteStatus; const previousCounts = { ...voteCounts };
-        const newStatus = voteType === 'remove' ? 'none' : voteType; setVoteStatus(newStatus); // Optimistic update
+        const newStatus = voteType === 'remove' ? 'none' : voteType; setVoteStatus(newStatus);
         try {
             await onVote(topic.$id, voteType);
             const [refetchedStatus, refetchedCounts] = await Promise.all([ getUserVoteStatus(currentUserId!, topic.$id), getTargetVoteCounts(topic.$id) ]);
@@ -205,13 +223,18 @@ const PostItem: React.FC<{
         };
         fetchVoteData();
         return () => { isMounted = false };
-    }, [isAuthenticated, currentUserId, post.$id, post.voteScore]);
+    }, [isAuthenticated, currentUserId, post.$id]); // Removed post.voteScore dependency here
+
+    useEffect(() => {
+        // Update local score if the prop changes (from WebSocket update in parent)
+        setVoteCounts(prev => ({ ...prev, score: post.voteScore || 0 }));
+    }, [post.voteScore]);
 
     const handleVote = async (voteType: 'up' | 'down' | 'remove') => {
         if (!isAuthenticated || isVoting || isLoadingVotes) return;
         setIsVoting(true);
         const previousStatus = voteStatus; const previousCounts = { ...voteCounts };
-        const newStatus = voteType === 'remove' ? 'none' : voteType; setVoteStatus(newStatus); // Optimistic update
+        const newStatus = voteType === 'remove' ? 'none' : voteType; setVoteStatus(newStatus);
         try {
             await onVote(post.$id, voteType);
             const [refetchedStatus, refetchedCounts] = await Promise.all([ getUserVoteStatus(currentUserId!, post.$id), getTargetVoteCounts(post.$id) ]);
@@ -233,7 +256,6 @@ const PostItem: React.FC<{
                         {formatRelativeTime(post.$createdAt)}
                     </span>
                 </div>
-                {/* Render post content using ReactMarkdown */}
                 <div className="prose prose-sm dark:prose-invert max-w-none mb-2 text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{post.content}</ReactMarkdown>
                 </div>
@@ -247,8 +269,6 @@ const PostItem: React.FC<{
                     </div>
                     {currentUserId === post.userId && (
                         <div className="flex gap-1">
-                            {/* Edit Button Placeholder */}
-                            {/* <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-100 h-7 w-7"><Edit className="h-4 w-4" /></Button> */}
                             <Button variant="ghost" size="icon" className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 h-7 w-7 rounded-full" onClick={() => onDelete(post.$id)} disabled={isDeleting} title="Delete Post">
                                 {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                             </Button>
@@ -272,17 +292,14 @@ const ForumPage: React.FC = () => {
     const { user, isAuthenticated } = useAuthStore();
 
     // --- State ---
-    // List View
     const [topics, setTopics] = useState<ForumTopic[]>([]);
     const [topicsLoading, setTopicsLoading] = useState(false);
     const [topicsError, setTopicsError] = useState<string | null>(null);
     const [topicsTotal, setTopicsTotal] = useState(0);
     const [topicsPage, setTopicsPage] = useState(1);
-    // Search/Filter/Sort
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState('All');
     const [sortBy, setSortBy] = useState<'lastReplyAt' | 'createdAt' | 'voteScore'>('lastReplyAt');
-    // Detail View
     const [currentTopic, setCurrentTopic] = useState<ForumTopic | null>(null);
     const [posts, setPosts] = useState<ForumPost[]>([]);
     const [topicLoading, setTopicLoading] = useState(false);
@@ -292,7 +309,6 @@ const ForumPage: React.FC = () => {
     const [postsTotal, setPostsTotal] = useState(0);
     const [postsPage, setPostsPage] = useState(1);
     const [postSearchQuery, setPostSearchQuery] = useState('');
-    // Forms & Actions
     const [replyContent, setReplyContent] = useState('');
     const [isReplying, setIsReplying] = useState(false);
     const [showCreateTopicForm, setShowCreateTopicForm] = useState(false);
@@ -300,16 +316,18 @@ const ForumPage: React.FC = () => {
     const [newTopicContent, setNewTopicContent] = useState('');
     const [newTopicCategory, setNewTopicCategory] = useState('');
     const [isCreatingTopic, setIsCreatingTopic] = useState(false);
-    const [isModerating, setIsModerating] = useState(false); // <-- New state for moderation check
+    const [isModerating, setIsModerating] = useState(false);
     const [isFormattingTopic, setIsFormattingTopic] = useState(false);
     const [isFormattingReply, setIsFormattingReply] = useState(false);
-    // Deletion Dialogs
     const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
     const [showDeletePostDialog, setShowDeletePostDialog] = useState(false);
     const [isDeletingPostConfirmed, setIsDeletingPostConfirmed] = useState(false);
     const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null);
     const [showDeleteTopicDialog, setShowDeleteTopicDialog] = useState(false);
     const [isDeletingTopicConfirmed, setIsDeletingTopicConfirmed] = useState(false);
+
+    // --- Ref for WebSocket Connection ---
+    const wsRef = useRef<WebSocket | null>(null);
 
     // --- Data Fetching Callbacks (Memoized) ---
     const fetchTopics = useCallback(async (page = 1, reset = false) => {
@@ -339,7 +357,11 @@ const ForumPage: React.FC = () => {
         const offset = (page - 1) * POSTS_PER_PAGE;
         try {
             const response = await getForumPosts(id, POSTS_PER_PAGE, offset, postSearchQuery);
-            setPosts(prev => (reset || page === 1) ? response.documents : [...prev, ...response.documents]);
+            // Sort posts by creation date ascending (oldest first) for display
+            const sortedPosts = response.documents.sort((a, b) =>
+                parseISO(a.$createdAt ?? '1970-01-01').getTime() - parseISO(b.$createdAt ?? '1970-01-01').getTime()
+            );
+            setPosts(prev => (reset || page === 1) ? sortedPosts : [...prev, ...sortedPosts]);
             setPostsTotal(response.total); setPostsPage(page);
         } catch (error: any) { setPostsError("Failed to load replies."); toast({ title: "Error", description: "Could not fetch replies.", variant: "destructive" }); console.error("Fetch posts error:", error); }
         finally { setPostsLoading(false); }
@@ -350,22 +372,136 @@ const ForumPage: React.FC = () => {
     const debouncedFetchPosts = useMemo(() => debounce(() => { if (topicId) fetchPosts(topicId, 1, true); }, SEARCH_DEBOUNCE_MS), [fetchPosts, topicId]);
 
     // --- Effects ---
-    useEffect(() => { // Fetch data based on route
+    // Fetch data based on route
+    useEffect(() => {
         if (topicId) {
-            setTopics([]); setTopicsTotal(0); setTopicsPage(1); setShowCreateTopicForm(false); // Reset list view
-            setCurrentTopic(null); setPosts([]); setPostsTotal(0); setPostsPage(1); setPostSearchQuery(''); // Reset detail view
+            setTopics([]); setTopicsTotal(0); setTopicsPage(1); setShowCreateTopicForm(false);
+            setCurrentTopic(null); setPosts([]); setPostsTotal(0); setPostsPage(1); setPostSearchQuery('');
             fetchTopicDetails(topicId); fetchPosts(topicId, 1, true);
         } else {
-            setCurrentTopic(null); setPosts([]); setPostsTotal(0); setPostsPage(1); setPostSearchQuery(''); // Reset detail view
-            setTopics([]); setTopicsTotal(0); setTopicsPage(1); // Reset list view
-            fetchTopics(1, true); // Fetch initial topics list
+            setCurrentTopic(null); setPosts([]); setPostsTotal(0); setPostsPage(1); setPostSearchQuery('');
+            setTopics([]); setTopicsTotal(0); setTopicsPage(1);
+            fetchTopics(1, true);
         }
-        setTopicsError(null); setTopicError(null); setPostsError(null); // Reset errors
+        setTopicsError(null); setTopicError(null); setPostsError(null);
     }, [topicId, fetchTopicDetails, fetchPosts, fetchTopics]);
 
+    // Trigger debounced fetches on search/filter changes
     useEffect(() => { if (!topicId) debouncedFetchTopics(); return () => debouncedFetchTopics.cancel(); }, [searchQuery, debouncedFetchTopics, topicId]);
     useEffect(() => { if (!topicId) fetchTopics(1, true); }, [filterCategory, sortBy, topicId]);
     useEffect(() => { if (topicId) debouncedFetchPosts(); return () => debouncedFetchPosts.cancel(); }, [postSearchQuery, debouncedFetchPosts, topicId]);
+
+    // *** WebSocket Connection Effect ***
+    useEffect(() => {
+        // Only connect if on a topic page and authenticated
+        if (!topicId || !isAuthenticated) {
+            if (wsRef.current) {
+                console.log('[WS Frontend] Disconnecting WebSocket due to navigation or auth change.');
+                wsRef.current.close();
+                wsRef.current = null;
+            }
+            return;
+        }
+
+        if (wsRef.current) {
+            console.log('[WS Frontend] WebSocket connection already exists.');
+            return;
+        }
+
+        console.log(`[WS Frontend] Attempting to connect to backend WebSocket at ${BACKEND_WS_URL}...`);
+        const ws = new WebSocket(BACKEND_WS_URL);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+            console.log('[WS Frontend] Connected to backend WebSocket.');
+            toast({ title: "Real-time connection established." });
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const message: BackendWebSocketMessage = JSON.parse(event.data as string);
+                console.log('[WS Frontend] Received message:', message.type, message.payload);
+
+                switch (message.type) {
+                    case 'new_post':
+                        const newPostData = message.payload as ForumPost;
+                        if (newPostData.topicId === topicId) {
+                            console.log(`[WS Frontend] Handling new_post for current topic ${topicId}`);
+                            setPosts(prevPosts => {
+                                if (prevPosts.some(p => p.$id === newPostData.$id)) return prevPosts;
+                                const updatedPosts = [...prevPosts, newPostData];
+                                // Ensure sorting is applied correctly
+                                return updatedPosts.sort((a, b) => parseISO(a.$createdAt ?? '1970-01-01').getTime() - parseISO(b.$createdAt ?? '1970-01-01').getTime());
+                            });
+                            // Optimistically update counts
+                            setCurrentTopic(prevTopic => prevTopic ? { ...prevTopic, replyCount: (prevTopic.replyCount || 0) + 1 } : null);
+                            setPostsTotal(prevTotal => prevTotal + 1);
+                        }
+                        break;
+
+                    case 'vote_update':
+                        const voteUpdateData = message.payload as BackendVoteUpdatePayload;
+                        const { targetId, targetType, voteCounts } = voteUpdateData;
+                        console.log(`[WS Frontend] Handling vote_update for ${targetType} ${targetId}`);
+
+                        if (targetType === 'topic') {
+                            // Update current topic score if it matches
+                            if (targetId === topicId) {
+                                setCurrentTopic(prevTopic => prevTopic ? { ...prevTopic, voteScore: voteCounts.score } : null);
+                            }
+                            // Update score in the topics list (for when navigating back)
+                            setTopics(prevTopics => prevTopics.map(t => t.$id === targetId ? { ...t, voteScore: voteCounts.score } : t));
+                        } else if (targetType === 'post') {
+                             // Update the specific post's score in the posts list
+                             // This will trigger re-render of PostItem due to prop change
+                            setPosts(prevPosts => prevPosts.map(p => p.$id === targetId ? { ...p, voteScore: voteCounts.score } : p));
+                        }
+                        break;
+
+                    case 'info':
+                        console.log('[WS Frontend] Info from backend:', message.payload);
+                        break;
+
+                    case 'error':
+                        console.error('[WS Frontend] Error message from backend:', message.payload);
+                        toast({ title: "Backend Error", description: message.payload?.message || 'Unknown error', variant: "destructive" });
+                        break;
+
+                    default:
+                        console.warn('[WS Frontend] Received unknown message type:', message.type);
+                }
+            } catch (error) {
+                console.error('[WS Frontend] Error processing message:', error, 'Raw data:', event.data);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('[WS Frontend] WebSocket Error:', error);
+            toast({ title: "Real-time Connection Error", description: "Lost connection to the update service. Updates paused.", variant: "destructive" });
+            wsRef.current = null;
+        };
+
+        ws.onclose = (event) => {
+            console.log(`[WS Frontend] WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
+            if (wsRef.current === ws) {
+                wsRef.current = null;
+            }
+            if (!event.wasClean) {
+                toast({ title: "Real-time connection lost unexpectedly.", variant: "default" });
+                // Optional: Implement reconnection logic here
+            }
+        };
+
+        // Cleanup Function
+        return () => {
+            if (wsRef.current) {
+                console.log('[WS Frontend Cleanup] Closing WebSocket connection.');
+                wsRef.current.close(1000, 'Component unmounting');
+                wsRef.current = null;
+            }
+        };
+
+    }, [topicId, isAuthenticated, toast]); // Dependencies
 
     // --- Handlers ---
     const handleFormatTopicContent = useCallback(async () => {
@@ -384,162 +520,65 @@ const ForumPage: React.FC = () => {
         finally { setIsFormattingReply(false); }
     }, [replyContent, toast]);
 
-    // --- MODIFIED handleCreateTopic with Moderation ---
     const handleCreateTopic = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !isAuthenticated) { toast({ title: "Authentication Required", description: "Please log in.", variant: "destructive" }); navigate('/login'); return; }
         if (!newTopicTitle.trim() || !newTopicContent.trim()) { toast({ title: "Missing Information", description: "Title and content required.", variant: "destructive" }); return; }
-
-        setIsModerating(true); // Indicate moderation check
-        setIsCreatingTopic(true); // Keep general loading active
-
+        setIsModerating(true); setIsCreatingTopic(true);
         try {
-            // --- Moderation Step ---
-            console.log("Moderating new topic content...");
-            const [titleModeration, contentModeration] = await Promise.all([
-                groqModService.moderateContent(newTopicTitle, { contentType: 'forum_title' }),
-                groqModService.moderateContent(newTopicContent, { contentType: 'forum_post' })
-            ]);
-            console.log("Moderation results:", { title: titleModeration.decision, content: contentModeration.decision });
-
-            // Combine flags and determine final decision
-            const combinedFlags = [...new Set([...titleModeration.flags, ...contentModeration.flags])];
-            let finalDecision = ModerationDecision.ALLOW;
-            let rejectionReason = "";
-
-            if (titleModeration.decision === ModerationDecision.DENY || contentModeration.decision === ModerationDecision.DENY) {
-                finalDecision = ModerationDecision.DENY;
-                rejectionReason = titleModeration.decision === ModerationDecision.DENY ? titleModeration.reason || "Title violates guidelines" : contentModeration.reason || "Content violates guidelines";
-            } else if (titleModeration.decision === ModerationDecision.FLAG || contentModeration.decision === ModerationDecision.FLAG) {
-                finalDecision = ModerationDecision.FLAG;
-                rejectionReason = contentModeration.decision === ModerationDecision.FLAG ? contentModeration.reason || "Content flagged" : titleModeration.reason || "Title flagged";
-            } else if (titleModeration.decision === ModerationDecision.ERROR || contentModeration.decision === ModerationDecision.ERROR) {
-                finalDecision = ModerationDecision.ERROR;
-                rejectionReason = "Moderation check failed.";
-            }
-            setIsModerating(false); // Moderation check finished
-
-            // --- Handle Moderation Outcome ---
-            if (finalDecision === ModerationDecision.DENY) {
-                toast({ title: "Topic Rejected", description: rejectionReason, variant: "destructive" });
-                setIsCreatingTopic(false); return;
-            }
-            if (finalDecision === ModerationDecision.ERROR) {
-                toast({ title: "Moderation Error", description: rejectionReason + " Please try again.", variant: "destructive" });
-                setIsCreatingTopic(false); return;
-            }
-
-            // --- Proceed with Creation (ALLOW or FLAG) ---
-            const needsReview = finalDecision === ModerationDecision.FLAG;
-            if (needsReview) {
-                // **Action Required:** Decide how to handle flagged content.
-                // Option A: Show toast only (content goes live but might be removed later)
-                toast({ title: "Topic Under Review", description: rejectionReason || "Submitted but requires moderator review.", variant: "default" });
-                // Option B: Add a 'needsReview' flag to the data sent to Appwrite
-                // You'll need to update the `createForumTopic` function and Appwrite schema.
-                console.warn("Topic content flagged:", rejectionReason, combinedFlags);
-            }
-
-            // Fetch profile for creator info
-            let profile: UserProfile | null = null; try { profile = await getUserProfile(user.$id); } catch (err) { console.warn("Profile fetch error", err); }
-            const creatorName = profile?.name || user.name || 'Anonymous';
-            const creatorAvatar = profile?.profilePhotoUrl;
-
-            // --- Create Topic in Appwrite ---
-            const createdTopic = await createForumTopic(user.$id, creatorName, creatorAvatar, {
-                title: newTopicTitle, content: newTopicContent, category: newTopicCategory || undefined,
-                // needsReview: needsReview, // Uncomment and implement if using Option B
-            });
-
-            toast({ title: "Topic Created Successfully!" });
-            setShowCreateTopicForm(false); setNewTopicTitle(''); setNewTopicContent(''); setNewTopicCategory('');
-            navigate(`/forum/${createdTopic.$id}`);
-
-        } catch (error: any) {
-            console.error("Error creating topic:", error);
-            toast({ title: "Creation Failed", description: error.message || "Could not create topic.", variant: "destructive" });
-        } finally {
+            const [titleModeration, contentModeration] = await Promise.all([ groqModService.moderateContent(newTopicTitle, { contentType: 'forum_title' }), groqModService.moderateContent(newTopicContent, { contentType: 'forum_post' }) ]);
+            const combinedFlags = [...new Set([...titleModeration.flags, ...contentModeration.flags])]; let finalDecision = ModerationDecision.ALLOW; let rejectionReason = "";
+            if (titleModeration.decision === ModerationDecision.DENY || contentModeration.decision === ModerationDecision.DENY) { finalDecision = ModerationDecision.DENY; rejectionReason = titleModeration.decision === ModerationDecision.DENY ? titleModeration.reason || "Title violates guidelines" : contentModeration.reason || "Content violates guidelines"; }
+            else if (titleModeration.decision === ModerationDecision.FLAG || contentModeration.decision === ModerationDecision.FLAG) { finalDecision = ModerationDecision.FLAG; rejectionReason = contentModeration.decision === ModerationDecision.FLAG ? contentModeration.reason || "Content flagged" : titleModeration.reason || "Title flagged"; }
+            else if (titleModeration.decision === ModerationDecision.ERROR || contentModeration.decision === ModerationDecision.ERROR) { finalDecision = ModerationDecision.ERROR; rejectionReason = "Moderation check failed."; }
             setIsModerating(false);
-            setIsCreatingTopic(false);
-        }
+            if (finalDecision === ModerationDecision.DENY) { toast({ title: "Topic Rejected", description: rejectionReason, variant: "destructive" }); setIsCreatingTopic(false); return; }
+            if (finalDecision === ModerationDecision.ERROR) { toast({ title: "Moderation Error", description: rejectionReason + " Please try again.", variant: "destructive" }); setIsCreatingTopic(false); return; }
+            const needsReview = finalDecision === ModerationDecision.FLAG; if (needsReview) { toast({ title: "Topic Under Review", description: rejectionReason || "Submitted but requires moderator review.", variant: "default" }); console.warn("Topic content flagged:", rejectionReason, combinedFlags); }
+            let profile: UserProfile | null = null; try { profile = await getUserProfile(user.$id); } catch (err) { console.warn("Profile fetch error", err); }
+            const creatorName = profile?.name || user.name || 'Anonymous'; const creatorAvatar = profile?.profilePhotoUrl;
+            const createdTopic = await createForumTopic(user.$id, creatorName, creatorAvatar, { title: newTopicTitle, content: newTopicContent, category: newTopicCategory || undefined, /* needsReview: needsReview */ });
+            toast({ title: "Topic Created Successfully!" }); setShowCreateTopicForm(false); setNewTopicTitle(''); setNewTopicContent(''); setNewTopicCategory(''); navigate(`/forum/${createdTopic.$id}`);
+        } catch (error: any) { console.error("Error creating topic:", error); toast({ title: "Creation Failed", description: error.message || "Could not create topic.", variant: "destructive" }); }
+        finally { setIsModerating(false); setIsCreatingTopic(false); }
     };
 
-    // --- MODIFIED handleReply with Moderation ---
     const handleReply = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !isAuthenticated || !topicId) { toast({ title: "Authentication Required", description: "Please log in to reply.", variant: "destructive" }); navigate('/login'); return; }
         if (!replyContent.trim()) { toast({ title: "Cannot Reply", description: "Reply content cannot be empty.", variant: "destructive" }); return; }
-
-        setIsModerating(true);
-        setIsReplying(true);
-
+        setIsModerating(true); setIsReplying(true);
         try {
-            // --- Moderation Step ---
-            console.log("Moderating reply content...");
             const contentModeration = await groqModService.moderateContent(replyContent, { contentType: 'forum_post' });
-            console.log("Moderation result:", contentModeration.decision);
-
-            const finalDecision = contentModeration.decision;
-            const rejectionReason = contentModeration.reason;
-
-            setIsModerating(false);
-
-            // --- Handle Moderation Outcome ---
-            if (finalDecision === ModerationDecision.DENY) {
-                toast({ title: "Reply Rejected", description: rejectionReason || "Your reply violates community guidelines.", variant: "destructive" });
-                setIsReplying(false); return;
-            }
-            if (finalDecision === ModerationDecision.ERROR) {
-                toast({ title: "Moderation Error", description: (rejectionReason || "Moderation check failed.") + " Please try again.", variant: "destructive" });
-                setIsReplying(false); return;
-            }
-
-            // --- Proceed with Creation (ALLOW or FLAG) ---
-            const needsReview = finalDecision === ModerationDecision.FLAG;
-            if (needsReview) {
-                // **Action Required:** Decide how to handle flagged content.
-                toast({ title: "Reply Under Review", description: rejectionReason || "Submitted but requires moderator review.", variant: "default" });
-                console.warn("Reply content flagged:", rejectionReason, contentModeration.flags);
-                 // Option B: Add 'needsReview' flag to data below if implemented
-            }
-
-            // Fetch profile for replier info
+            const finalDecision = contentModeration.decision; const rejectionReason = contentModeration.reason; setIsModerating(false);
+            if (finalDecision === ModerationDecision.DENY) { toast({ title: "Reply Rejected", description: rejectionReason || "Your reply violates community guidelines.", variant: "destructive" }); setIsReplying(false); return; }
+            if (finalDecision === ModerationDecision.ERROR) { toast({ title: "Moderation Error", description: (rejectionReason || "Moderation check failed.") + " Please try again.", variant: "destructive" }); setIsReplying(false); return; }
+            const needsReview = finalDecision === ModerationDecision.FLAG; if (needsReview) { toast({ title: "Reply Under Review", description: rejectionReason || "Submitted but requires moderator review.", variant: "default" }); console.warn("Reply content flagged:", rejectionReason, contentModeration.flags); }
             let profile: UserProfile | null = null; try { profile = await getUserProfile(user.$id); } catch (err) { console.warn("Profile fetch error", err); }
-            const replierName = profile?.name || user.name || 'Anonymous';
-            const replierAvatar = profile?.profilePhotoUrl;
-
-            // --- Create Post in Appwrite ---
-            await createForumPost(user.$id, replierName, replierAvatar, {
-                topicId: topicId, content: replyContent,
-                // needsReview: needsReview, // Uncomment and implement if using Option B
-            });
-
-            setReplyContent('');
-            toast({ title: "Reply Posted" });
-            await fetchPosts(topicId, 1, true); // Refresh posts
-            await fetchTopicDetails(topicId); // Refresh topic details (counts)
-
-        } catch (error: any) {
-            console.error("Error posting reply:", error);
-            toast({ title: "Reply Failed", description: error.message || "Could not post reply.", variant: "destructive" });
-        } finally {
-            setIsModerating(false);
-            setIsReplying(false);
-        }
+            const replierName = profile?.name || user.name || 'Anonymous'; const replierAvatar = profile?.profilePhotoUrl;
+            // Create post - the backend will receive this via Appwrite function and broadcast via WebSocket
+            await createForumPost(user.$id, replierName, replierAvatar, { topicId: topicId, content: replyContent, /* needsReview: needsReview */ });
+            setReplyContent(''); toast({ title: "Reply Posted" });
+            // Update topic details (like reply count) - might still be needed if not included in WS message
+            await fetchTopicDetails(topicId);
+            // No need to manually fetchPosts here, WebSocket should handle it
+        } catch (error: any) { console.error("Error posting reply:", error); toast({ title: "Reply Failed", description: error.message || "Could not post reply.", variant: "destructive" }); }
+        finally { setIsModerating(false); setIsReplying(false); }
     };
 
-
-    // --- Vote Handler ---
     const handleVoteAction = useCallback(async (targetId: string, targetType: 'topic' | 'post', voteType: 'up' | 'down' | 'remove') => {
         if (!user || !isAuthenticated) { toast({ title: "Login Required", description: "Please log in to vote.", variant: "default" }); throw new Error("User not authenticated"); }
-        try { await castForumVote(user.$id, targetId, targetType, voteType); }
+        try {
+            // Cast vote - backend will receive via Appwrite function and broadcast via WebSocket
+            await castForumVote(user.$id, targetId, targetType, voteType);
+            // Optimistic update handled in child components, WebSocket handles final state
+        }
         catch (error: any) { console.error(`Error casting vote:`, error); toast({ title: "Vote Error", description: error.message || "Could not cast vote.", variant: "destructive" }); throw error; }
     }, [user, isAuthenticated, toast]);
 
     const handleTopicVote = useCallback((topicId: string, voteType: 'up' | 'down' | 'remove') => handleVoteAction(topicId, 'topic', voteType), [handleVoteAction]);
     const handlePostVote = useCallback((postId: string, voteType: 'up' | 'down' | 'remove') => handleVoteAction(postId, 'post', voteType), [handleVoteAction]);
 
-    // --- Delete Handlers ---
     const handleDeletePostClick = (postId: string) => {
         if (!isAuthenticated) { toast({ title: "Login Required", variant: "destructive" }); return; }
         setDeletingPostId(postId); setShowDeletePostDialog(true);
@@ -551,9 +590,14 @@ const ForumPage: React.FC = () => {
         try {
             const postToDelete = posts.find(p => p.$id === deletingPostId);
             if (postToDelete?.userId !== user.$id) { toast({ title: "Unauthorized", description: "Cannot delete others' posts.", variant: "destructive" }); throw new Error("Unauthorized"); }
+            // Delete post - Appwrite function might trigger a 'delete' event (if configured)
             await deleteForumPost(deletingPostId, topicId);
             toast({ title: "Post Deleted" });
-            await fetchPosts(topicId, 1, true); await fetchTopicDetails(topicId);
+            // Optimistic UI removal
+            setPosts(prev => prev.filter(p => p.$id !== deletingPostId));
+            // Refresh topic details (counts)
+            await fetchTopicDetails(topicId);
+            // Optional: If backend sends a 'delete_post' message, handle it in onmessage
         } catch (error: any) { if (error.message !== "Unauthorized") { toast({ title: "Deletion Failed", description: error.message || "Could not delete post.", variant: "destructive" }); } console.error("Delete post error:", error); }
         finally { setShowDeletePostDialog(false); setDeletingPostId(null); setIsDeletingPostConfirmed(false); }
     };
@@ -571,11 +615,12 @@ const ForumPage: React.FC = () => {
             const result = await deleteForumTopicAndPosts(deletingTopicId);
             toast({ title: "Topic Deletion Processed", description: `Topic deleted: ${result.topicDeleted}. Posts deleted: ${result.postsDeleted}, Failed: ${result.postsFailed}.`, variant: result.topicDeleted && result.postsFailed === 0 ? "default" : "destructive" });
             if (result.topicDeleted) { navigate('/forum', { replace: true }); }
+            // Optional: If backend sends a 'delete_topic' message, handle it
         } catch (error: any) { if (error.message !== "Unauthorized") { toast({ title: "Deletion Failed", description: error.message || "Could not delete topic.", variant: "destructive" }); } console.error("Delete topic error:", error); }
         finally { setShowDeleteTopicDialog(false); setDeletingTopicId(null); setIsDeletingTopicConfirmed(false); }
     };
 
-    // --- Render Logic (Topic List and Detail Views - Including Markdown Rendering) ---
+    // --- Render Logic ---
     const renderTopicList = () => (
         <div className="space-y-6">
             {/* Control Bar */}
@@ -642,7 +687,6 @@ const ForumPage: React.FC = () => {
                             <Avatar className="h-9 w-9 border flex-shrink-0 mt-1"> <AvatarImage src={currentTopic.userAvatarUrl || undefined} alt={currentTopic.userName} /> <AvatarFallback>{getInitials(currentTopic.userName)}</AvatarFallback> </Avatar>
                             <div className="flex-grow min-w-0">
                                 <div className="flex justify-between items-center mb-1 flex-wrap gap-x-2"> <span className="font-semibold text-sm text-gray-800 dark:text-gray-200 hover:underline">{currentTopic.userName} (OP)</span> <span className="text-xs text-gray-500 dark:text-gray-400" title={currentTopic.$createdAt ? new Date(currentTopic.$createdAt).toLocaleString() : ''}>{formatRelativeTime(currentTopic.$createdAt)}</span> </div>
-                                {/* Render OP content using ReactMarkdown */}
                                 <div className="prose prose-sm dark:prose-invert max-w-none mb-2 text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
                                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: ({ node, ...props }: AnchorProps) => (<a target="_blank" rel="noopener noreferrer" {...props} />) }}>{currentTopic.content}</ReactMarkdown>
                                 </div>
@@ -658,7 +702,8 @@ const ForumPage: React.FC = () => {
                             {postsLoading && posts.length === 0 && (<div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-momcare-primary mx-auto" /></div>)}
                             {postsError && (<div className="text-center py-10 text-red-600 dark:text-red-400">{postsError}</div>)}
                             {!postsLoading && !postsError && posts.length === 0 && (<div className="text-center py-10 text-gray-500 dark:text-gray-400">{postSearchQuery ? 'No replies match your search.' : 'No replies yet. Be the first to reply!'}</div>)}
-                            {posts.length > 0 && (<div className="space-y-0">{posts.map(post => (<PostItem key={post.$id} post={post} currentUserId={user?.$id || null} isAuthenticated={!!isAuthenticated} onDelete={handleDeletePostClick} isDeleting={deletingPostId === post.$id && isDeletingPostConfirmed} onVote={handlePostVote} />))}</div>)}
+                            {/* Ensure posts are sorted correctly before mapping */}
+                            {posts.length > 0 && (<div className="space-y-0">{posts.sort((a, b) => parseISO(a.$createdAt ?? '1970-01-01').getTime() - parseISO(b.$createdAt ?? '1970-01-01').getTime()).map(post => (<PostItem key={post.$id} post={post} currentUserId={user?.$id || null} isAuthenticated={!!isAuthenticated} onDelete={handleDeletePostClick} isDeleting={deletingPostId === post.$id && isDeletingPostConfirmed} onVote={handlePostVote} />))}</div>)}
                             {!postsLoading && posts.length > 0 && posts.length < postsTotal && (<div className="text-center mt-6"><Button variant="outline" onClick={() => fetchPosts(topicId!, postsPage + 1, false)} disabled={postsLoading}>Load More Replies ({postsTotal - posts.length} remaining)</Button></div>)}
                             {postsLoading && posts.length > 0 && (<div className="text-center mt-6"><Loader2 className="h-6 w-6 animate-spin text-momcare-primary mx-auto" /></div>)}
                         </div>
@@ -688,15 +733,16 @@ const ForumPage: React.FC = () => {
         </div>
     );
 
+    // --- Main Return JSX ---
     return (
-        <MainLayout requireAuth={false}> {/* Allow viewing forum logged out */}
+        <MainLayout requireAuth={false}>
             <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 md:py-8">
                 {topicId ? renderTopicDetail() : renderTopicList()}
             </div>
 
             {/* Delete Post Dialog */}
             <AlertDialog open={showDeletePostDialog} onOpenChange={setShowDeletePostDialog}>
-                <AlertDialogContent>
+                 <AlertDialogContent>
                     <AlertDialogHeader> <AlertDialogTitle>Confirm Post Deletion</AlertDialogTitle> <AlertDialogDescription>Are you sure you want to delete this post? This action cannot be undone.</AlertDialogDescription> </AlertDialogHeader>
                     <AlertDialogFooter> <AlertDialogCancel onClick={() => setDeletingPostId(null)} disabled={isDeletingPostConfirmed}>Cancel</AlertDialogCancel> <AlertDialogAction onClick={confirmDeletePost} className="bg-destructive hover:bg-destructive/90" disabled={isDeletingPostConfirmed}> {isDeletingPostConfirmed ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Delete Post"} </AlertDialogAction> </AlertDialogFooter>
                 </AlertDialogContent>
@@ -704,7 +750,7 @@ const ForumPage: React.FC = () => {
 
             {/* Delete Topic Dialog */}
             <AlertDialog open={showDeleteTopicDialog} onOpenChange={setShowDeleteTopicDialog}>
-                <AlertDialogContent>
+                 <AlertDialogContent>
                     <AlertDialogHeader> <AlertDialogTitle>Confirm Topic Deletion</AlertDialogTitle> <AlertDialogDescription> Are you sure you want to delete this entire topic, including all its replies? This action cannot be undone. </AlertDialogDescription> </AlertDialogHeader>
                     <AlertDialogFooter> <AlertDialogCancel onClick={() => setDeletingTopicId(null)} disabled={isDeletingTopicConfirmed}>Cancel</AlertDialogCancel> <AlertDialogAction onClick={confirmDeleteTopic} className="bg-destructive hover:bg-destructive/90" disabled={isDeletingTopicConfirmed}> {isDeletingTopicConfirmed ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Delete Topic & Replies"} </AlertDialogAction> </AlertDialogFooter>
                 </AlertDialogContent>
