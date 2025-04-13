@@ -4,7 +4,7 @@
     "description": "Sends new forum post events to Fluvio",
     "main": "src/index.js",
     "dependencies": {
-        "@fluvio/client": "^0.14.9",
-        "node-appwrite": "^15.0.1"
+    "@fluvio/client": "^0.14.9",
+    "node-appwrite": "^13.0.0"
     }
 }
