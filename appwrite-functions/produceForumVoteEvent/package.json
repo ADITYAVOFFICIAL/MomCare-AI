@@ -1,0 +1,10 @@
+{
+    "name": "produceforumpostevent",
+    "version": "1.0.0",
+    "description": "Sends new forum post events to Fluvio",
+    "main": "src/index.js",
+    "dependencies": {
+        "@fluvio/client": "^0.14.9",
+        "node-appwrite": "^15.0.1"
+    }
+}
