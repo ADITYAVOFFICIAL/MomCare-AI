@@ -1,37 +1,31 @@
 // produceForumVoteEvent/src/index.js
 
-const WebSocket = require('ws'); // Use the standard WebSocket client library
+const WebSocket = require('ws');
 const sdk = require('node-appwrite');
 
 // Helper to safely stringify JSON
 const safeJsonStringify = (obj) => {
      try { return JSON.stringify(obj); }
-     catch (e) {
-         // Use console.error directly as 'error' function might not be available here
-         console.error("Stringify Error:", e);
-         return null;
-     }
+     catch (e) { console.error(`Stringify Error: ${e.message}`); return null; } // Log error message
 };
 
 // Helper to get vote counts for a target
-// Note: This requires indexes on targetId and voteType in your forumVotes collection
-// Pass log/error from the main function context
 const getVoteCounts = async (databases, databaseId, votesCollectionId, targetId, log, error) => {
-    // Basic validation of inputs to the helper
     if (!databases || !databaseId || !votesCollectionId || !targetId) {
-         error("getVoteCounts missing required parameters.");
+         const missing = [!databases && 'databases', !databaseId && 'databaseId', !votesCollectionId && 'votesCollectionId', !targetId && 'targetId'].filter(Boolean).join(', ');
+         error(`getVoteCounts missing required parameters: ${missing}.`);
          throw new Error("Internal configuration error in getVoteCounts.");
     }
     try {
         log(`Fetching vote counts for targetId: ${targetId}`);
-        // Count upvotes
-        // Use limit(1) to get total count efficiently without fetching all documents
         const upvoteQuery = [sdk.Query.equal('targetId', targetId), sdk.Query.equal('voteType', 'up'), sdk.Query.limit(1)];
-        const upvotesResult = await databases.listDocuments(databaseId, votesCollectionId, upvoteQuery);
-
-        // Count downvotes
         const downvoteQuery = [sdk.Query.equal('targetId', targetId), sdk.Query.equal('voteType', 'down'), sdk.Query.limit(1)];
-        const downvotesResult = await databases.listDocuments(databaseId, votesCollectionId, downvoteQuery);
+
+        // Execute queries concurrently
+        const [upvotesResult, downvotesResult] = await Promise.all([
+            databases.listDocuments(databaseId, votesCollectionId, upvoteQuery),
+            databases.listDocuments(databaseId, votesCollectionId, downvoteQuery)
+        ]);
 
         const counts = {
             upvotes: upvotesResult.total,
@@ -42,9 +36,12 @@ const getVoteCounts = async (databases, databaseId, votesCollectionId, targetId,
         return counts;
     } catch (countError) {
         error(`Error fetching vote counts for target ${targetId}: ${countError.message}`);
-        // Log the specific Appwrite error if available
         if (countError.response) {
             error(`Appwrite vote count error details: ${safeJsonStringify(countError.response)}`);
+        }
+        // Check for common index errors
+        if (countError.message && countError.message.toLowerCase().includes('index not found')) {
+             error(`Potential missing index: Ensure indexes exist on 'targetId' and 'voteType' in collection '${votesCollectionId}'.`);
         }
         throw countError; // Re-throw to be caught by the main handler
     }
@@ -52,118 +49,110 @@ const getVoteCounts = async (databases, databaseId, votesCollectionId, targetId,
 
 
 module.exports = async ({ req, res, log, error }) => {
-    log('produceForumVoteEvent function triggered.'); // Log entry immediately
+    log('----- produceForumVoteEvent Triggered -----');
 
     // --- Detailed Request Logging ---
-    const eventType = req.headers['x-appwrite-event']; // Get the specific event header
-    log(`Event Type Header: ${eventType}`);
-    log(`Raw Payload Type: ${typeof req.payload}`);
-    log(`Raw Payload Value: ${req.payload}`); // Log the raw payload
+    const eventType = req.headers['x-appwrite-event'];
+    log(`Event Type Header: ${eventType || 'Not Found'}`);
+    log(`Raw Payload Value: ${req.payload || '(empty)'}`); // Log the raw payload
 
     // --- Appwrite Setup ---
     const client = new sdk.Client();
-    const databases = new sdk.Databases(client); // Initialize Databases service
+    const databases = new sdk.Databases(client);
     const APPWRITE_ENDPOINT = process.env.APPWRITE_ENDPOINT;
     const APPWRITE_PROJECT_ID = process.env.APPWRITE_PROJECT_ID;
     const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
-    const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID; // Need the Database ID
-    const FORUM_VOTES_COLLECTION_ID = process.env.FORUM_VOTES_COLLECTION_ID; // Need Votes Collection ID
+    const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID;
+    const FORUM_VOTES_COLLECTION_ID = process.env.FORUM_VOTES_COLLECTION_ID;
 
     // --- Configuration Validation ---
-    if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID || !APPWRITE_API_KEY || !APPWRITE_DATABASE_ID || !FORUM_VOTES_COLLECTION_ID) {
-        error('Missing Appwrite environment variables (ENDPOINT, PROJECT_ID, API_KEY, DATABASE_ID, FORUM_VOTES_COLLECTION_ID).');
-        return res.json({ success: false, error: 'Appwrite configuration missing.' }, 500); // Use 500 for config errors
+    const missingEnvVars = [
+        !APPWRITE_ENDPOINT && 'APPWRITE_ENDPOINT',
+        !APPWRITE_PROJECT_ID && 'APPWRITE_PROJECT_ID',
+        !APPWRITE_API_KEY && 'APPWRITE_API_KEY',
+        !APPWRITE_DATABASE_ID && 'APPWRITE_DATABASE_ID',
+        !FORUM_VOTES_COLLECTION_ID && 'FORUM_VOTES_COLLECTION_ID',
+        !process.env.FLUVIO_ACCESS_KEY && 'FLUVIO_ACCESS_KEY'
+    ].filter(Boolean);
+
+    if (missingEnvVars.length > 0) {
+        error(`Missing environment variables: ${missingEnvVars.join(', ')}`);
+        return res.json({ success: false, error: `Appwrite/Fluvio configuration missing: ${missingEnvVars.join(', ')}` }, 500);
     }
     client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID).setKey(APPWRITE_API_KEY);
 
     // --- Fluvio Gateway URL & Topic ---
     const FLUVIO_ACCESS_KEY = process.env.FLUVIO_ACCESS_KEY;
-    if (!FLUVIO_ACCESS_KEY) {
-        error('Missing Fluvio Access Key environment variable.');
-        return res.json({ success: false, error: 'Fluvio configuration missing.' }, 500);
-    }
     const fluvioGatewayUrl = `wss://infinyon.cloud/wsr/v1/fluvio?access_key=${FLUVIO_ACCESS_KEY}`;
-    const FLUVIO_TARGET_TOPIC = 'forum-votes'; // Correct topic for vote events
+    const FLUVIO_TARGET_TOPIC = 'forum-votes';
 
     let ws; // WebSocket instance variable
 
     try {
         // --- Get Document ID and Action from Event Header ---
-        // Example event: databases.[DB_ID].collections.[COLL_ID].documents.[DOC_ID].[ACTION]
         const eventParts = eventType?.split('.') ?? [];
-        // Correct indices: ID is at index 4, Action is at index 5
         const documentId = eventParts.length > 4 ? eventParts[4] : null;
         const action = eventParts.length > 5 ? eventParts[5] : null;
 
-        if (!documentId) {
-            error(`Could not extract document ID from event header: ${eventType}`);
+        if (!documentId || documentId === 'documents') { // Check for the specific incorrect extraction
+            error(`Could not extract valid document ID from event header: ${eventType}. Extracted: '${documentId}'`);
             return res.json({ success: false, error: 'Could not identify document from event.' }, 400);
+        }
+        if (!action) {
+            error(`Could not extract action from event header: ${eventType}`);
+             return res.json({ success: false, error: 'Could not identify action from event.' }, 400);
         }
         log(`Extracted document ID: ${documentId}, Action: ${action}`);
 
-
-        // --- Fetch Document Data or Handle Delete ---
+        // --- Determine Target Info ---
         let targetId;
         let targetType;
-        let voteDocument; // Keep track of the fetched/parsed document if available
+        let voteDocument; // Store fetched/parsed doc
 
-        // Try parsing payload first, as it *should* be there if permissions are correct
+        // 1. Try parsing payload (best case if permissions are fixed)
         let payload;
         if (req.payload && typeof req.payload === 'string' && req.payload.trim() !== '') {
              try {
                  payload = JSON.parse(req.payload);
-                 log(`Successfully parsed req.payload: ${safeJsonStringify(payload)}`);
-                 // If payload exists and has the needed info, use it directly
+                 log(`Successfully parsed req.payload.`);
                  if (payload.targetId && payload.targetType) {
                      targetId = payload.targetId;
                      targetType = payload.targetType;
-                     voteDocument = payload; // Use payload as the source document info
+                     voteDocument = payload;
                      log(`Using target info from payload: targetId=${targetId}, targetType=${targetType}`);
                  } else {
                       log('Payload parsed but missing targetId or targetType. Will attempt fetch.');
                  }
              } catch (parseError) {
                  error(`Failed to parse req.payload JSON: ${parseError.message}. Raw: ${req.payload}. Will attempt fetch.`);
-                 // Continue to fetch attempt
              }
         } else {
              log('Request payload is missing or empty. Will attempt fetch.');
         }
 
-
-        // If target info wasn't in the payload, fetch the document (unless it's a delete event)
+        // 2. Fetch document if needed (and not a delete action where payload was missing)
         if ((!targetId || !targetType) && action !== 'delete') {
              try {
                  log(`Fetching vote document because payload lacked target info: ${documentId}`);
                  voteDocument = await databases.getDocument(APPWRITE_DATABASE_ID, FORUM_VOTES_COLLECTION_ID, documentId);
-                 log(`Fetched vote document: ${safeJsonStringify(voteDocument)}`);
+                 log(`Fetched vote document successfully.`);
                  targetId = voteDocument.targetId;
                  targetType = voteDocument.targetType;
              } catch (fetchError) {
                  if (fetchError.code === 404) {
-                     error(`Vote document ${documentId} not found during fetch. Skipping Fluvio event.`);
+                     error(`Vote document ${documentId} not found during fetch (event: ${action}). Skipping Fluvio event.`);
                      return res.json({ success: true, message: 'Document not found, skipping event.' });
                  }
                  error(`Error fetching vote document ${documentId}: ${fetchError.message}`);
                  throw fetchError; // Rethrow other fetch errors
              }
         } else if (action === 'delete' && (!targetId || !targetType)) {
-             // Handle delete when payload was missing - This is the difficult case
+             // Handle delete when payload was missing
              error(`Cannot process delete event ${documentId} without targetId/targetType (payload was empty). Cannot update counts accurately.`);
-             // Option: You could try parsing the event string, but it's brittle.
-             // Example (FRAGILE - USE WITH CAUTION):
-             // const dbIdPattern = /databases\.(\w+)\./;
-             // const collIdPattern = /collections\.(\w+)\./;
-             // const docIdPattern = /documents\.(\w+)\./;
-             // const dbMatch = eventType.match(dbIdPattern);
-             // const collMatch = eventType.match(collIdPattern);
-             // const docMatch = eventType.match(docIdPattern);
-             // log(`Attempting to parse event string: DB=${dbMatch?.[1]}, Coll=${collMatch?.[1]}, Doc=${docMatch?.[1]}`);
-             // If you previously stored targetId/Type elsewhere upon vote creation, fetch that instead.
-             return res.json({ success: false, error: 'Cannot process delete event without payload or alternative target info.' }, 400);
+             return res.json({ success: false, error: 'Cannot process delete event without payload.' }, 400);
         }
 
-        // Final validation that we have the target info
+        // 3. Final validation
         if (!targetId || !targetType) {
             error('Could not determine targetId or targetType for the vote event after fetch attempt.');
             return res.json({ success: false, error: 'Missing target information for vote.' }, 500);
@@ -174,7 +163,7 @@ module.exports = async ({ req, res, log, error }) => {
         // --- Recalculate Vote Counts ---
         const voteCounts = await getVoteCounts(databases, APPWRITE_DATABASE_ID, FORUM_VOTES_COLLECTION_ID, targetId, log, error);
 
-        // --- Prepare Event Data for Fluvio ---
+        // --- Prepare Event Data ---
         const eventData = { type: 'vote_update', targetId, targetType, voteCounts };
         const eventDataString = safeJsonStringify(eventData);
         if (!eventDataString) {
@@ -196,8 +185,8 @@ module.exports = async ({ req, res, log, error }) => {
                         const messageToSend = `${FLUVIO_TARGET_TOPIC}\n${eventDataString}`;
                         ws.send(messageToSend);
                         log(`Sent vote_update event via WebSocket for target ID: ${targetId}`);
-                        ws.close(1000, "Message sent"); // Close normally after sending
-                        resolve(); // Success
+                        ws.close(1000, "Message sent");
+                        resolve();
                     } catch (sendError) {
                          error(`WebSocket send error: ${sendError.message}`);
                          if (ws && ws.readyState !== WebSocket.CLOSED) ws.close(1011, "Send error");
@@ -216,13 +205,11 @@ module.exports = async ({ req, res, log, error }) => {
                     clearTimeout(connectionTimeout);
                     const reasonString = reason?.toString() || 'No reason provided';
                     log(`WebSocket closed. Code: ${code}, Reason: ${reasonString}`);
-                    if (code !== 1000 && code !== 1005 /* No Status Received */) {
+                    if (code !== 1000 && code !== 1005) {
                          reject(new Error(`WebSocket closed unexpectedly with code ${code}: ${reasonString}`));
                     }
-                    // If resolved previously in 'open', this is fine.
                 });
 
-                 // Timeout for the connection attempt
                  connectionTimeout = setTimeout(() => {
                      error("WebSocket connection timed out.");
                      if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {

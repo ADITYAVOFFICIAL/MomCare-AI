@@ -528,7 +528,7 @@ const ProductPage: React.FC = () => {
     };
 
     // --- Render Logic ---
-    const renderContent = (): JSX.Element => {
+    const renderContent = (): React.JSX.Element => {
         // State 1: Not Authenticated
         if (isAuthenticated === false) {
             return (

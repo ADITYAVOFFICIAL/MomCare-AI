@@ -20,54 +20,63 @@ import {
   Activity,
   Package,
   Salad,
-  Gamepad2
+  Gamepad2,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
+import Hero from '@/components/ui/Hero';
+import { useQuery } from '@tanstack/react-query';   // <-- Import useQuery
+import { getTotalUserCount } from '@/lib/appwrite';
+import HomeCta from '@/components/ui/HomeCta'; 
 
 const HomePage = () => {
+  const {
+    data: userCountData,
+    isLoading: isLoadingUserCount,
+    isError: isErrorUserCount,
+    error: userCountError // Optional: get the actual error object
+   } = useQuery({
+    queryKey: ['totalUserCount'], // Unique key for this query cache
+    queryFn: getTotalUserCount,    // The function that fetches the data
+    refetchInterval: 60000, // Optional: Refetch every 60 seconds
+    staleTime: 30000,       // Optional: Data fresh for 30 seconds
+    retry: 1, // Optional: Retry once on failure
+  });
+  // -----------------------------------------
+
+  // Helper function to render the user count display
+  const renderUserCount = () => {
+    if (isLoadingUserCount) {
+      // Show a loading spinner
+      return <Loader2 className="h-5 w-5 animate-spin text-momcare-primary inline-block" aria-label="Loading user count"/>;
+    }
+
+    if (isErrorUserCount) {
+      // Show an error indicator
+      console.error("Error fetching user count:", userCountError); // Log the error for debugging
+      return (
+        <span className="font-medium flex items-center" title={userCountError instanceof Error ? userCountError.message : 'Could not load user count'}>
+          <AlertCircle className="h-5 w-5 text-red-500 inline-block mr-1" /> --
+        </span>
+      );
+    }
+
+    if (userCountData && typeof userCountData.totalUsers === 'number') {
+      // Format and display the count
+      const formattedCount = new Intl.NumberFormat().format(userCountData.totalUsers);
+      return <span className="font-medium">
+      <span className="font-bold">{formattedCount}</span> Active Users
+    </span>
+    }
+
+    // Fallback if data is somehow invalid (shouldn't normally happen with TS)
+    return <span className="font-medium">-- Active Users</span>;
+  };
   return (
     <MainLayout>
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 py-20 md:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="md:flex md:items-center md:justify-between">
-            <div className="md:w-1/2 md:pr-12">
-              <h1 className="text-4xl md:text-5xl font-bold text-momcare-primary tracking-tight relative">
-                Welcome to <span className="text-momcare-accent">MomCare AI</span>
-                <span className="absolute -top-6 right-24 text-momcare-accent opacity-20 text-7xl font-bold">♡</span>
-              </h1>
-              <p className="mt-6 text-lg md:text-xl text-gray-700 leading-relaxed">
-                Your AI-powered companion throughout your pregnancy journey. Get personalized support, access to resources, and connect with care providers.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Button size="lg" className="bg-momcare-primary hover:bg-momcare-dark text-white shadow-lg hover:shadow-xl transition-all" asChild>
-                  <Link to="/chat">
-                    <MessageSquare className="mr-2 h-5 w-5" />
-                    Chat with AI
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" className="border-momcare-primary text-momcare-primary hover:bg-momcare-light hover:text-momcare-dark transition-all" asChild>
-                  <Link to="/signup">
-                    <Heart className="mr-2 h-5 w-5" />
-                    Join MomCare
-                  </Link>
-                </Button>
-              </div>
-            </div>
-            <div className="mt-10 md:mt-0 md:w-1/2">
-              <div className="relative">
-                <div className="absolute -top-5 -left-5 w-24 h-24 bg-momcare-light rounded-full opacity-50 z-0"></div>
-                <div className="absolute -bottom-5 -right-5 w-24 h-24 bg-momcare-light rounded-full opacity-50 z-0"></div>
-                <img
-                  src="https://images.unsplash.com/photo-1519791883288-dc8bd696e667?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-                  alt="Pregnant woman"
-                  className="w-full h-auto rounded-2xl shadow-xl z-10 relative"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Hero />
 
       {/* Trusted By Section */}
       <section className="py-10 bg-white">
@@ -81,7 +90,7 @@ const HomePage = () => {
               </div>
               <div className="flex items-center space-x-2 text-gray-700">
                 <CheckCircle className="h-5 w-5 text-momcare-primary" />
-                <span className="font-medium">XX Active Users</span>
+                <span className="font-medium">{renderUserCount()}</span>
               </div>
               <div className="flex items-center space-x-2 text-gray-700">
                 <Sparkles className="h-5 w-5 text-momcare-primary" />
@@ -378,27 +387,7 @@ const HomePage = () => {
       </section> */}
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-momcare-primary to-momcare-dark text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold">Start Your MomCare Journey Today</h2>
-          <p className="mt-4 text-lg max-w-3xl mx-auto">
-            Join thousands of expectant mothers who trust MomCare AI for support throughout their pregnancy journey.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-            <Button size="lg" className="bg-white text-momcare-primary hover:bg-gray-100" asChild>
-              <Link to="/signup">
-                Create Free Account
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="border-white text-white bg-momcare-primary hover:bg-momcare-dark" asChild>
-              <Link to="/chat">
-                <MessageSquare className="mr-2 h-5 w-5" />
-                Try AI Chat
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      <HomeCta />
       
       {/* Features Highlights */}
       <section className="py-16">

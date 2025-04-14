@@ -1,0 +1,25 @@
+{
+    "projectId": "67eedd2200263ded93ad",
+    "functions": [
+        {
+            "$id": "67fcd091000e68e8f5aa",
+            "name": "getUserCount",
+            "runtime": "node-22",
+            "specification": "s-0.5vcpu-512mb",
+            "execute": [
+                "any"
+            ],
+            "events": [],
+            "scopes": [
+                "users.read"
+            ],
+            "schedule": "",
+            "timeout": 15,
+            "enabled": true,
+            "logging": true,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "path": "functions/getUserCount"
+        }
+    ]
+}

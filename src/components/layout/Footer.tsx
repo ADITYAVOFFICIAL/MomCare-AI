@@ -89,6 +89,13 @@ const Footer = () => {
           <p className="mt-2 text-xs text-gray-400 text-center max-w-2xl mx-auto">
             Disclaimer: MomCare AI provides informational support and is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
           </p>
+          <Link
+            to="/sup"
+            onClick={() => window.scrollTo(0, 0)} // Add this onClick handler
+           >
+          <p className="mt-2 text-xs text-gray-400 text-center max-w-2xl mx-auto">
+            Easter Egg
+          </p></Link>
         </div>
       </div>
     </footer>

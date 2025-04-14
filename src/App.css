@@ -40,3 +40,55 @@
 .read-the-docs {
   color: #888;
 }
+
+/* === Add this to your global CSS file (e.g., src/index.css) === */
+
+/* Keyframes for abstract background blobs */
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+/* Class to apply the blob animation */
+.animate-blob {
+  animation: blob 7s infinite ease-in-out;
+}
+
+/* Optional delay classes for blobs */
+.animation-delay-2000 { animation-delay: 2s; }
+.animation-delay-4000 { animation-delay: 4s; }
+
+/* Keyframes for moving hearts */
+@keyframes drift {
+  0% {
+    transform: translateY(0px) translateX(0px) rotate(0deg) scale(1);
+    /* Use var() if you need dynamic opacity based on element, otherwise set initial */
+    opacity: inherit; /* Inherits opacity set by Tailwind class */
+  }
+  25% {
+    transform: translateY(-15px) translateX(10px) rotate(5deg) scale(1.05);
+  }
+  50% {
+    transform: translateY(0px) translateX(-10px) rotate(-3deg) scale(1);
+    opacity: inherit; /* Maintain opacity */
+  }
+  75% {
+    transform: translateY(10px) translateX(5px) rotate(2deg) scale(0.95);
+  }
+  100% {
+    transform: translateY(0px) translateX(0px) rotate(0deg) scale(1);
+    opacity: inherit; /* Return to original opacity */
+  }
+}
+
+/* Class to apply the drift animation */
+.animate-drift {
+  animation-name: drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  /* Animation duration and delay are set via inline style in the component */
+}
+
+/* =============================================================== */

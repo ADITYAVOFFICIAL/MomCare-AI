@@ -26,5 +26,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "src/lib/fluvioService.ts"]
+  "include": ["src", "momcare-backend/src/lib/fluvioService.ts"]
 }

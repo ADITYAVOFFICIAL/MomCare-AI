@@ -10,7 +10,8 @@ import {
     Models, // Use Models namespace for Document type
     Permission,
     Role,
-    AppwriteException
+    AppwriteException,
+    Functions
 } from 'appwrite';
 import { formatDistanceToNow, parseISO } from 'date-fns'; // Import date-fns
 import { ProductRecommendation } from './groqProduct';
@@ -36,6 +37,7 @@ const forumTopicsCollectionId: string = import.meta.env.VITE_PUBLIC_APPWRITE_FOR
 const forumPostsCollectionId: string = import.meta.env.VITE_PUBLIC_APPWRITE_FORUM_POSTS_COLLECTION_ID as string;
 const bookmarkedProductsCollectionId: string = import.meta.env.VITE_PUBLIC_APPWRITE_BOOKMARKED_PRODUCTS_COLLECTION_ID as string || 'bookmarkedProducts';
 const forumVotesCollectionId: string = import.meta.env.VITE_PUBLIC_APPWRITE_FORUM_VOTES_COLLECTION_ID as string || 'forumVotes';
+const userCountFunctionId: string = import.meta.env.VITE_PUBLIC_APPWRITE_USER_COUNT_FUNCTION_ID as string;
 // --- Bucket IDs ---
 // Ensure these Storage Buckets exist in your Appwrite project.
 export const profileBucketId: string = import.meta.env.VITE_PUBLIC_APPWRITE_PROFILE_BUCKET_ID as string;
@@ -65,6 +67,7 @@ const requiredConfigs: Record<string, string | undefined> = {
     forumVotesCollectionId,
     forumPostsCollectionId,
     bookmarkedProductsCollectionId,
+    userCountFunctionId,
 };
 
 const missingConfigs: string[] = Object.entries(requiredConfigs)
@@ -95,6 +98,7 @@ export const account = new Account(client);
 export const avatars = new Avatars(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
+export const functions = new Functions(client);
 
 // --- Type Definitions ---
 
@@ -1548,5 +1552,228 @@ export const updateForumPost = async (postId: string, data: UpdateForumPostData)
     } catch (error) {
         handleAppwriteError(error, `updating forum post ${postId}`);
         throw error;
+    }
+};
+// --- Doctor Dashboard Specific Functions ---
+
+/**
+ * Searches user profiles based on a query string (name or email).
+ * Requires collection-level read permission for the 'doctor' role on the 'profiles' collection.
+ * NOTE: Ensure 'name' and/or 'email' attributes are indexed for searching in Appwrite.
+ */
+export const searchUserProfiles = async (query: string): Promise<UserProfile[]> => {
+    if (!profilesCollectionId) {
+        console.error("Profile Collection ID not configured!");
+        return [];
+    }
+    if (!query?.trim()) {
+        return []; // Return empty if query is empty
+    }
+    console.log(`Searching profiles with query: "${query}"`);
+    try {
+        // Search across relevant fields - requires FULLTEXT indexes on these fields in Appwrite
+        const searchNamePromise = databases.listDocuments<UserProfile>(
+            databaseId,
+            profilesCollectionId,
+            [Query.search('name', query.trim()), Query.limit(15)] // Limit results
+        );
+        const searchEmailPromise = databases.listDocuments<UserProfile>(
+            databaseId,
+            profilesCollectionId,
+            [Query.search('email', query.trim()), Query.limit(15)] // Limit results
+        );
+
+        const [nameResults, emailResults] = await Promise.all([searchNamePromise, searchEmailPromise]);
+
+        // Combine and deduplicate results
+        const combinedResults = new Map<string, UserProfile>();
+        nameResults.documents.forEach(doc => combinedResults.set(doc.$id, doc));
+        emailResults.documents.forEach(doc => combinedResults.set(doc.$id, doc)); // Overwrites duplicates, which is fine
+
+        console.log(`Profile search found ${combinedResults.size} unique results.`);
+        return Array.from(combinedResults.values());
+
+    } catch (error) {
+        // Handle index not found errors gracefully
+        if (error instanceof AppwriteException && error.code === 400 && error.message.toLowerCase().includes('index not found')) {
+            console.error(`Error searching profiles: Required full-text index on 'name' or 'email' likely missing in collection '${profilesCollectionId}'.`);
+            handleAppwriteError(new Error("Search functionality requires specific database indexes. Please contact admin."), 'searching user profiles (Index Error)', false);
+            // Optionally re-throw or return specific error indicator
+             throw new Error("Search setup incomplete. Required indexes missing.");
+        } else {
+            handleAppwriteError(error, `searching user profiles with query "${query}"`, false);
+        }
+        return []; // Return empty on error
+    }
+};
+
+
+/**
+ * Fetches all upcoming appointments across all users.
+ * Requires collection-level read permission for the 'doctor' role on the 'appointments' collection.
+ * WARNING: In a real app, filter this by appointments assigned to the specific doctor.
+ */
+export const getAllUpcomingAppointments = async (limit: number = 50): Promise<Appointment[]> => {
+    if (!appointmentsCollectionId) {
+        console.error("Appointments Collection ID not configured!");
+        return [];
+    }
+    console.log("Fetching all upcoming appointments (Doctor View - Placeholder)");
+    try {
+        const now = new Date().toISOString(); // Get current time in ISO format for comparison
+        const response = await databases.listDocuments<Appointment>(
+            databaseId,
+            appointmentsCollectionId,
+            [
+                Query.greaterThanEqual('date', now), // Fetch appointments from now onwards
+                Query.orderAsc('date'),           // Sort by soonest first
+                Query.limit(limit)
+                // TODO: Add Query.equal('doctorId', loggedInDoctorId) in a real implementation
+                // TODO: Add Query.equal('isCompleted', false) if needed
+            ]
+        );
+        console.log(`Fetched ${response.documents.length} upcoming appointments.`);
+        return response.documents;
+    } catch (error) {
+        handleAppwriteError(error, `fetching all upcoming appointments (doctor view)`, false);
+        return [];
+    }
+};
+
+/**
+ * Fetches recent medical documents across all users.
+ * Requires collection-level read permission for the 'doctor' role on the 'medicalDocuments' collection.
+ * WARNING: In a real app, filter this by documents needing review or related to the doctor's patients.
+ */
+export const getAllRecentMedicalDocuments = async (limit: number = 50): Promise<MedicalDocument[]> => {
+    if (!medicalDocumentsCollectionId) {
+        console.error("Medical Documents Collection ID not configured!");
+        return [];
+    }
+    console.log("Fetching all recent medical documents (Doctor View - Placeholder)");
+    try {
+        const response = await databases.listDocuments<MedicalDocument>(
+            databaseId,
+            medicalDocumentsCollectionId,
+            [
+                Query.orderDesc('$createdAt'), // Sort by newest first
+                Query.limit(limit)
+                // TODO: Add Query.equal('reviewStatus', 'pending') in a real implementation
+            ]
+        );
+         console.log(`Fetched ${response.documents.length} recent medical documents.`);
+        return response.documents;
+    } catch (error) {
+        handleAppwriteError(error, `fetching all recent medical documents (doctor view)`, false);
+        return [];
+    }
+};
+
+/**
+ * Fetches multiple user profiles based on a list of user IDs.
+ * Useful for getting patient names for appointments or documents.
+ * Requires collection-level read permission for the 'doctor' role on the 'profiles' collection.
+ */
+export const getUserProfilesByIds = async (userIds: string[]): Promise<Map<string, UserProfile>> => {
+    if (!profilesCollectionId) {
+        console.error("Profile Collection ID not configured!");
+        return new Map();
+    }
+    if (!userIds || userIds.length === 0) {
+        return new Map();
+    }
+
+    // Deduplicate IDs
+    const uniqueUserIds = [...new Set(userIds)];
+
+    // Appwrite query limit is often 100, chunk if necessary (simplified here)
+    if (uniqueUserIds.length > 100) {
+        console.warn("Fetching more than 100 profiles at once, consider pagination or chunking.");
+        // Implement chunking logic if needed
+    }
+
+    try {
+        const response = await databases.listDocuments<UserProfile>(
+            databaseId,
+            profilesCollectionId,
+            [
+                Query.equal('userId', uniqueUserIds), // Query by multiple IDs
+                Query.limit(uniqueUserIds.length)   // Adjust limit
+            ]
+        );
+
+        const profilesMap = new Map<string, UserProfile>();
+        response.documents.forEach(profile => {
+            // Ensure profilePhotoUrl is generated if needed (optional here)
+             if (profile.profilePhotoId && profileBucketId) {
+                  try { profile.profilePhotoUrl = getFilePreview(profile.profilePhotoId, profileBucketId)?.href; } catch {}
+             }
+             profilesMap.set(profile.userId, profile); // Map by userId for easy lookup
+        });
+        console.log(`Fetched ${profilesMap.size} profiles for ${uniqueUserIds.length} requested IDs.`);
+        return profilesMap;
+
+    } catch (error) {
+        handleAppwriteError(error, `fetching profiles for user IDs`, false);
+        return new Map();
+    }
+};
+// --- NEW: Function to Get Total User Count ---
+/**
+ * Calls the deployed Appwrite Cloud Function to get the total registered user count.
+ * @returns Promise<{ totalUsers: number }>
+ * @throws Error if function ID is missing, execution fails, or response is invalid.
+ */
+export const getTotalUserCount = async (): Promise<{ totalUsers: number }> => {
+    if (!userCountFunctionId) {
+        console.error("User Count Function ID not configured in .env (VITE_PUBLIC_APPWRITE_USER_COUNT_FUNCTION_ID)");
+        throw new Error("Configuration error: User Count Function ID is missing.");
+    }
+    const context = `executing user count function (${userCountFunctionId})`;
+    try {
+        console.log(`Attempting: ${context}`);
+        const result = await functions.createExecution(
+            userCountFunctionId,
+            '',    // Body (empty for GET)
+            false, // Synchronous execution
+            '/',   // Path
+            // @ts-ignore - SDK type definition issue for ExecutionMethod in this version
+            'GET'
+        );
+
+        console.log(`Function execution result status: ${result.status}`);
+
+        if (result.status === 'completed') {
+            try {
+                // Ensure responseBody is treated as string before parsing
+                const responseBodyString = typeof result.responseBody === 'string' ? result.responseBody : '{}';
+                const responseData = JSON.parse(responseBodyString);
+
+                if (typeof responseData.totalUsers === 'number') {
+                    console.log(`Successfully received user count: ${responseData.totalUsers}`);
+                    return { totalUsers: responseData.totalUsers };
+                } else {
+                    console.error("Function response body missing 'totalUsers' or not a number:", result.responseBody);
+                    throw new Error("Invalid response format from function.");
+                }
+            } catch (parseError) {
+                console.error("Raw function response body (parse error):", result.responseBody);
+                console.error("Error parsing function response:", parseError);
+                throw new Error("Could not parse function response.");
+            }
+        } else {
+            // Log the error output: Remove responseStdErr
+            console.error(`Function execution failed with status: ${result.status}. Response Body:`, result.responseBody || 'N/A'); // Log responseBody on failure
+            throw new Error(`Function execution failed with status: ${result.status}. Check function logs in Appwrite Console.`);
+        }
+    } catch (error) {
+        // Handle potential Appwrite exceptions or other errors
+        handleAppwriteError(error, context);
+        // Ensure an error is always thrown from this function on failure
+        if (error instanceof Error) {
+            throw error;
+        } else {
+            throw new Error(`An unknown error occurred during ${context}.`);
+        }
     }
 };
