@@ -647,7 +647,7 @@ const DashboardPage: React.FC = () => {
                                                     </div>
                                                     {nextDoctorAppointment.notes && (<p className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded border border-gray-200 line-clamp-2"><span className="font-medium">Notes:</span> {nextDoctorAppointment.notes}</p>)}
                                                     <div className="flex justify-end pt-1">
-                                                        <Button asChild size="sm" variant="outline" className="text-momcare-primary border-momcare-primary/50 hover:bg-momcare-primary/5 text-xs px-3 py-1 h-auto"><a href="/appointment">Manage All</a></Button>
+                                                        <Button asChild size="sm" variant="outline" className="text-momcare-primary border-momcare-primary/50 hover:bg-momcare-primary/10 hover:text-momcare-primary text-xs px-3 py-1 h-auto"><a href="/appointment">Manage All</a></Button>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -680,7 +680,7 @@ const DashboardPage: React.FC = () => {
                                                     </div>
                                                     {nextClassAppointment.notes && (<p className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded border border-gray-200 line-clamp-2"><span className="font-medium">Notes:</span> {nextClassAppointment.notes}</p>)}
                                                     <div className="flex justify-end pt-1">
-                                                        <Button asChild size="sm" variant="outline" className="text-momcare-secondary border-momcare-secondary/50 hover:bg-momcare-secondary/5 text-xs px-3 py-1 h-auto"><a href="/appointment">Manage All</a></Button>
+                                                        <Button asChild size="sm" variant="outline" className="text-momcare-secondary border-momcare-secondary/50 hover:bg-momcare-secondary/10 hover:text-momcare-secondary text-xs px-3 py-1 h-auto"><a href="/appointment">Manage All</a></Button>
                                                     </div>
                                                 </div>
                                             ) : (

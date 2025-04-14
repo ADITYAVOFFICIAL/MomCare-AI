@@ -665,7 +665,7 @@ const ProductPage: React.FC = () => {
                                             <div className="flex justify-between items-start gap-2">
                                                 <CardTitle className="text-base font-semibold text-momcare-primary dark:text-momcare-light">{item.name}</CardTitle>
                                                 {/* TODO: Apply category color helper if implemented */}
-                                                {item.category && ( <Badge variant="secondary" className="text-xs whitespace-nowrap capitalize bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-2 py-0.5 rounded-full"> {item.category} </Badge> )}
+                                                {item.category && ( <Badge variant="secondary" className="text-xs font-semibold px-2.5 py-1 rounded-full bg-momcare-light text-momcare-dark tracking-wide hover:bg-momcare-dark hover:text-momcare-light"> {item.category} </Badge> )}
                                             </div>
                                         </CardHeader>
                                         <CardContent className="p-4 pt-1 flex-grow space-y-2">
@@ -751,7 +751,7 @@ const ProductPage: React.FC = () => {
                                             <div className="flex justify-between items-start gap-2">
                                                 <CardTitle className="text-base font-semibold text-momcare-primary dark:text-momcare-light">{item.name}</CardTitle>
                                                  {/* TODO: Apply category color helper if implemented */}
-                                                {item.category && ( <Badge variant="secondary" className="text-xs whitespace-nowrap capitalize bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 px-2 py-0.5 rounded-full"> {item.category} </Badge> )}
+                                                {item.category && ( <Badge variant="secondary" className="text-xs whitespace-nowrap capitalize text-momcare-dark bg-momcare-light tracking-wide hover:bg-momcare-dark hover:text-momcare-light px-2 py-0.5 rounded-full"> {item.category} </Badge> )}
                                             </div>
                                         </CardHeader>
                                         <CardContent className="p-4 pt-1 flex-grow space-y-2">

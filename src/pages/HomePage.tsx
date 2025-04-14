@@ -22,7 +22,8 @@ import {
   Salad,
   Gamepad2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Tag,
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import Hero from '@/components/ui/Hero';
@@ -122,7 +123,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Get personalized answers to your pregnancy questions anytime, tailored to your specific needs.
               </p>
-              <Link to="/chat" className="mt-4 inline-flex items-center text-sm font-medium text-momcare-primary dark:text-momcare-accent hover:text-momcare-dark dark:hover:text-momcare-light">
+              <Link to="/chat" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-momcare-primary dark:text-momcare-accent hover:text-momcare-dark dark:hover:text-momcare-light">
                 Start chatting <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -136,7 +137,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Easily book and manage appointments with healthcare providers for your prenatal care.
               </p>
-              <Link to="/appointment" className="mt-4 inline-flex items-center text-sm font-medium text-momcare-secondary dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+              <Link to="/appointment" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-momcare-secondary dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                 Book appointment <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -150,7 +151,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Securely store and manage your medical records, scans, and test results in one place.
               </p>
-              <Link to="/medicaldocs" className="mt-4 inline-flex items-center text-sm font-medium text-momcare-accent dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300">
+              <Link to="/medicaldocs" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-momcare-accent dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300">
                 Manage documents <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -164,7 +165,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Quick access to emergency contacts, warning signs, and nearby hospitals when needed most.
               </p>
-              <Link to="/emergency" className="mt-4 inline-flex items-center text-sm font-medium text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
+              <Link to="/emergency" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
                 View emergency info <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -178,7 +179,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Access informative articles, tips, and resources about pregnancy, childbirth, and early motherhood.
               </p>
-              <Link to="/resources" className="mt-4 inline-flex items-center text-sm font-medium text-green-500 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
+              <Link to="/resources" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-green-500 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
                 Explore resources <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -192,7 +193,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Track your pregnancy journey with a personalized dashboard showing important milestones and reminders.
               </p>
-              <Link to="/dashboard" className="mt-4 inline-flex items-center text-sm font-medium text-purple-500 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
+              <Link to="/dashboard" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-purple-500 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
                 View dashboard <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -206,7 +207,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Connect with other expectant mothers, share experiences, and find support in our community.
               </p>
-              <Link to="/forum" className="mt-4 inline-flex items-center text-sm font-medium text-orange-500 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
+              <Link to="/forum" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-orange-500 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
                 Join the discussion <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -220,7 +221,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Discover helpful products for pregnancy and baby care, recommended by AI based on your profile or needs.
               </p>
-              <Link to="/products" className="mt-4 inline-flex items-center text-sm font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+              <Link to="/products" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
                 Find products <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -234,7 +235,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Receive personalized meal plans and safe exercise suggestions tailored to your pregnancy stage and preferences.
               </p>
-              <Link to="/meals" className="mt-4 inline-flex items-center text-sm font-medium text-teal-500 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300">
+              <Link to="/meals" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-teal-500 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300">
                 Get ideas <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -248,7 +249,7 @@ const HomePage = () => {
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
                 Play our fun stacking game, test your skills, and submit your high score to the Monad blockchain leaderboard.
               </p>
-              <Link to="/games" className="mt-4 inline-flex items-center text-sm font-medium text-cyan-500 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300">
+              <Link to="/games" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-cyan-500 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300">
                 Play the game <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
@@ -431,6 +432,24 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+       {/* --- NEW: Pricing Section --- */}
+       <section className="py-16 md:py-20 bg-white dark:bg-gray-900">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <Tag className="mx-auto h-10 w-10 text-momcare-secondary mb-4" />
+          <h2 className="text-3xl md:text-4xl font-bold text-momcare-primary dark:text-momcare-light tracking-tight mb-4">
+            Find the Perfect Plan
+          </h2>
+          <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+            Whether you're just starting or need comprehensive support, we have a plan that fits your needs. Explore our flexible pricing options.
+          </p>
+          <Button size="lg" className="bg-momcare-secondary hover:bg-momcare-secondary/90 text-white text-lg px-8 py-3" asChild>
+            <Link to="/pricing" onClick={() => window.scrollTo(0, 0)}>
+              View Pricing Plans <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+      {/* --- End Pricing Section --- */}
     </MainLayout>
   );
 };

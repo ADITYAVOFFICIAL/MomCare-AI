@@ -29,7 +29,9 @@ import ForumPage from "./pages/ForumPage";
 import ProductsPage from "./pages/ProductPage";
 import MealPage from "./pages/MealPage";
 import GamesPage from "./pages/GamesPage";
-import DoctorPage from "./pages/Doctor";
+import DoctorPage from "./pages/DoctorPage";
+import PricingPage from "./pages/PricingPage";
+import ContactPage from "./pages/ContactPage";
 import { Home } from "lucide-react";
 const queryClient = new QueryClient();
 
@@ -53,6 +55,8 @@ const App = () => {
             <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
             <Route path="/terms" element={<TermsPage />} /> 
             <Route path="/privacy" element={<PrivacyPolicyPage />}/> 
+            <Route path="/pricing" element={<PricingPage />}/> 
+            <Route path="/contact" element={<ContactPage />}/> 
             {/* Protected routes */}
             <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />

@@ -73,7 +73,7 @@ const MedReminder: React.FC<MedReminderProps> = ({
                     <CardTitle className="flex items-center text-momcare-accent text-lg font-semibold">
                         <Clock className="mr-2 h-5 w-5" />Medication Reminders
                     </CardTitle>
-                    <Button size="sm" variant="outline" onClick={onAddReminder} className="text-momcare-accent border-momcare-accent/50 hover:bg-momcare-accent/5">
+                    <Button size="sm" variant="outline" onClick={onAddReminder} className="text-momcare-accent border-momcare-accent/50 hover:text-momcare-accent hover:bg-momcare-accent/5">
                         <PlusCircle className="mr-1.5 h-4 w-4" /> Add New
                     </Button>
                 </div>

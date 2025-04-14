@@ -3,12 +3,10 @@
 import React from 'react'; // Standard React import
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button'; // Assuming Button is from Shadcn UI
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, LogIn, UserPlus } from 'lucide-react'; // Added UserPlus for Create Account, kept LogIn for Doctor
 import { motion, type Variants } from 'framer-motion'; // Import motion and Variants type
 
 // Define animation variants outside the component for performance and clarity
-// Uses the Variants type from framer-motion for stricter TypeScript checking
-
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
@@ -27,8 +25,7 @@ const itemVariants: Variants = {
     y: 0, // Animate to full opacity and original Y position
     transition: {
       duration: 0.6,
-      // *** FIX: Replaced invalid cubic-bezier array with a standard easing string ***
-      ease: "easeOut", // Use a standard easing function like "easeOut" or "easeInOut"
+      ease: "easeOut", // Use a standard easing function
     },
   },
 };
@@ -43,7 +40,7 @@ const buttonMotionProps = {
  * HomeCta Component: Renders the main Call-to-Action section for the homepage.
  * Includes animated text and buttons using Framer Motion.
  */
-const HomeCta: React.FC = () => { // Use React.FC for functional component typing
+const HomeCta: React.FC = () => {
   return (
     // Section container with motion for triggering animations on scroll
     <motion.section
@@ -69,47 +66,64 @@ const HomeCta: React.FC = () => { // Use React.FC for functional component typin
           className="mx-auto mb-10 mt-4 max-w-3xl text-lg text-white/90 sm:text-xl"
           variants={itemVariants} // Apply item animation variants
         >
-          Join thousands of expectant mothers who trust MomCare AI for personalized support and guidance throughout their pregnancy journey.
+          Join thousands of expectant mothers and healthcare professionals using MomCare for better pregnancy support and management.
         </motion.p>
 
         {/* Animated Button Container */}
         <motion.div
-          className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6"
+          // Using gap-4 for consistency, adjust if needed
+          className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5"
           variants={itemVariants} // Apply item animation variants to the container
         >
-          {/* Button 1: Create Account */}
-          <motion.div {...buttonMotionProps}> {/* Apply hover/tap animations */}
+          {/* Button 1: Create Account (User Focus) */}
+          <motion.div {...buttonMotionProps}>
             <Button
               size="lg"
-              // Enhanced styling for better visual appeal and clarity
+              // Primary CTA style: White background, primary text
               className="rounded-lg bg-white px-8 py-3 text-base font-semibold text-momcare-primary shadow-md transition-shadow duration-300 hover:bg-gray-100 hover:shadow-lg"
-              asChild // Use asChild to allow the Link component to be the actual interactive element
+              asChild
             >
               <Link to="/signup">
-                Create Free Account
+                <UserPlus aria-hidden="true" className="mr-2 h-5 w-5" /> {/* Icon for user signup */}
+                Join as Patient
               </Link>
             </Button>
           </motion.div>
 
-          {/* Button 2: Try AI Chat */}
-          <motion.div {...buttonMotionProps}> {/* Apply hover/tap animations */}
+          {/* Button 2: Doctor Access (Distinct Style) */}
+          <motion.div {...buttonMotionProps}>
+            <Button
+              size="lg"
+              // Distinct Doctor style: Primary color background, white text
+              className="rounded-lg bg-momcare-primary px-8 py-3 text-base font-semibold text-white shadow-md ring-1 ring-white/50 transition-all duration-300 hover:bg-momcare-primary/90 hover:shadow-lg hover:ring-white/70"
+              asChild
+            >
+              <Link to="/doctor" onClick={() => window.scrollTo(0, 0)}>
+                <LogIn aria-hidden="true" className="mr-2 h-5 w-5" /> {/* Icon for login/access */}
+                Doctor Access
+              </Link>
+            </Button>
+          </motion.div>
+
+          {/* Button 3: Try AI Chat (Outline Style) */}
+          <motion.div {...buttonMotionProps}>
             <Button
               size="lg"
               variant="outline"
-              // Enhanced styling for better visual appeal and clarity
+              // Outline style: Transparent background, white border/text
               className="rounded-lg border-white px-8 py-3 text-base font-semibold text-white shadow-md transition-all duration-300 bg-transparent hover:bg-white/10 hover:text-white hover:shadow-lg"
-              asChild // Use asChild for the Link
+              asChild
             >
               <Link to="/chat">
-                <MessageSquare aria-hidden="true" className="mr-2 h-5 w-5" /> {/* Added aria-hidden */}
+                <MessageSquare aria-hidden="true" className="mr-2 h-5 w-5" />
                 Try AI Chat
               </Link>
             </Button>
           </motion.div>
+
         </motion.div>
       </div>
-      {/* Optional: Add subtle background elements/shapes here with motion if desired */}
-      {/* Example: <motion.div className="absolute inset-0 z-0 ..."> */}
+      {/* Optional: Add subtle background elements/shapes here */}
     </motion.section>
   );
 };
