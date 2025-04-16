@@ -197,7 +197,7 @@ const MedicalDocsPage = () => {
   };
 
   // Helper function remains the same
-  const getDocumentIconByType = (mimeType: string = ''): JSX.Element => {
+  const getDocumentIconByType = (mimeType: string = ''): React.JSX.Element => {
     if (mimeType.includes('pdf')) return <FileText className="h-5 w-5 text-red-500" />;
     if (mimeType.startsWith('image/')) return <File className="h-5 w-5 text-blue-500" />;
     return <File className="h-5 w-5 text-gray-500" />;
@@ -249,7 +249,7 @@ const MedicalDocsPage = () => {
                              hover:file:bg-momcare-primary/10"
                 />
                 <p className="text-xs text-gray-500">
-                  Accepted file types: PDF, JPG, PNG, etc. (Check Appwrite bucket settings for limits)
+                  Accepted file types: PDF, JPG, PNG.
                 </p>
               </div>
 
