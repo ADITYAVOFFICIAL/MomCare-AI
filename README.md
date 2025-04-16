@@ -78,9 +78,9 @@ In essence, MomCare AI consolidates essential pregnancy tools and enhances them 
     - **Impact:** Demonstrates seamless integration of EVM-compatible blockchain for novel engagement features, showcasing potential for scalable Web3 additions on a performant network.
 - [✅] **Fluvio/InfinyOn:** Enables real-time forum updates. Appwrite Functions ([`produceForumPostEvent`](appwrite-functions/produceForumPostEvent/), [`produceForumVoteEvent`](appwrite-functions/produceForumVoteEvent/)) act as producers sending events to **InfinyOn Cloud topics**. A separate backend service ([`momcare-backend`](momcare-backend/)) consumes these topics and broadcasts updates via WebSockets.
     - **Impact:** Powers real-time features, creating a dynamic and engaging community experience distinct from static forums.
-- [ ] **Base:** _AgentKit / OnchainKit / Smart Wallet usage_ (Dependency `@coinbase/onchainkit` present but usage not primary focus).
-- [ ] **Screenpipe:** _Screen-based analytics or workflows_
-- [ ] **Stellar:** _Payments, identity, or token usage_
+- [❌] **Base:** _AgentKit / OnchainKit / Smart Wallet usage_ (Dependency `@coinbase/onchainkit` present but usage not primary focus).
+- [❌] **Screenpipe:** _Screen-based analytics or workflows_
+- [❌] **Stellar:** _Payments, identity, or token usage_
 *(Mark with ✅ if completed)*
 ---
 
