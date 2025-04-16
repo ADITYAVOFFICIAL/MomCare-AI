@@ -1,0 +1,19 @@
+{
+    "name": "momcare-backend",
+    "version": "1.0.0",
+    "description": "WebSocket server for MomCare AI real-time features",
+    "main": "src/index.ts",
+    "type": "module",
+    "scripts": {
+      "start": "bun run src/index.ts",
+      "dev": "bun run --watch src/index.ts" 
+    },
+    "dependencies": {
+      "@fluvio/client": "^0.14.9",
+      "dotenv": "^16.4.5"
+    },
+    "devDependencies": {
+      "@types/node": "^20.14.10",
+      "typescript": "^5.5.3"
+    }
+  }

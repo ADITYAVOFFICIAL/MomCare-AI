@@ -12,7 +12,7 @@ import {
 } from 'groq-sdk/resources/chat/completions';
 
 // --- Appwrite Type Imports ---
-import { UserProfile } from '../../momcare-backend/src/lib/appwrite'; // Adjust path if necessary
+import { UserProfile } from './appwrite'; // Adjust path if necessary
 
 // --- Local Type Definitions ---
 

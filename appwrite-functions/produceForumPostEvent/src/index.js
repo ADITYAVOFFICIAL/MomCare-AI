@@ -1,6 +1,4 @@
-// produceForumPostEvent/src/index.js
-
-const WebSocket = require('ws'); // Use the standard WebSocket client library
+const WebSocket = require('ws');
 const sdk = require('node-appwrite');
 
 // Helper to safely stringify JSON
@@ -14,13 +12,13 @@ const safeJsonStringify = (obj) => {
 };
 
 module.exports = async ({ req, res, log, error }) => {
-    log('produceForumPostEvent function triggered.'); // Log entry immediately
+    log('----- produceForumPostEvent Triggered -----'); // Clearer entry log
 
     // --- Detailed Request Logging ---
     const eventType = req.headers['x-appwrite-event']; // Get the specific event header
-    log(`Event Type Header: ${eventType}`);
+    log(`Event Type Header: ${eventType || 'Not Found'}`);
     log(`Raw Payload Type: ${typeof req.payload}`);
-    log(`Raw Payload Value: ${req.payload}`); // Log the raw payload
+    log(`Raw Payload Value: ${req.payload ? req.payload.substring(0, 100) + '...' : '(empty)'}`); // Log snippet
 
     // --- Appwrite Setup ---
     const client = new sdk.Client();
@@ -28,22 +26,28 @@ module.exports = async ({ req, res, log, error }) => {
     const APPWRITE_ENDPOINT = process.env.APPWRITE_ENDPOINT;
     const APPWRITE_PROJECT_ID = process.env.APPWRITE_PROJECT_ID;
     const APPWRITE_API_KEY = process.env.APPWRITE_API_KEY;
-    const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID; // Need the Database ID
-    const FORUM_POSTS_COLLECTION_ID = process.env.FORUM_POSTS_COLLECTION_ID; // Need Posts Collection ID
+    const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID;
+    const FORUM_POSTS_COLLECTION_ID = process.env.FORUM_POSTS_COLLECTION_ID;
 
     // --- Configuration Validation ---
-    if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID || !APPWRITE_API_KEY || !APPWRITE_DATABASE_ID || !FORUM_POSTS_COLLECTION_ID) {
-        error('Missing Appwrite environment variables (ENDPOINT, PROJECT_ID, API_KEY, DATABASE_ID, FORUM_POSTS_COLLECTION_ID).');
-        return res.json({ success: false, error: 'Appwrite configuration missing.' }, 500); // Use 500 for config errors
+    const missingEnvVars = [
+        !APPWRITE_ENDPOINT && 'APPWRITE_ENDPOINT',
+        !APPWRITE_PROJECT_ID && 'APPWRITE_PROJECT_ID',
+        !APPWRITE_API_KEY && 'APPWRITE_API_KEY',
+        !APPWRITE_DATABASE_ID && 'APPWRITE_DATABASE_ID',
+        !FORUM_POSTS_COLLECTION_ID && 'FORUM_POSTS_COLLECTION_ID',
+        !process.env.FLUVIO_ACCESS_KEY && 'FLUVIO_ACCESS_KEY' // Added Fluvio key check
+    ].filter(Boolean);
+
+    if (missingEnvVars.length > 0) {
+        const errorMsg = `Missing environment variables: ${missingEnvVars.join(', ')}`;
+        error(errorMsg);
+        return res.json({ success: false, error: `Configuration missing: ${errorMsg}` }, 500);
     }
     client.setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID).setKey(APPWRITE_API_KEY);
 
     // --- Fluvio Gateway URL & Topic ---
     const FLUVIO_ACCESS_KEY = process.env.FLUVIO_ACCESS_KEY;
-    if (!FLUVIO_ACCESS_KEY) {
-        error('Missing Fluvio Access Key environment variable.');
-        return res.json({ success: false, error: 'Fluvio configuration missing.' }, 500);
-    }
     const fluvioGatewayUrl = `wss://infinyon.cloud/wsr/v1/fluvio?access_key=${FLUVIO_ACCESS_KEY}`;
     const FLUVIO_TARGET_TOPIC = 'forum-posts'; // Correct topic for post events
 
@@ -51,54 +55,88 @@ module.exports = async ({ req, res, log, error }) => {
 
     try {
         // --- Get Document ID and Action from Event Header ---
-        // Example event: databases.[DB_ID].collections.[COLL_ID].documents.[DOC_ID].create
+        // Example event: databases.[DB_ID].collections.[COLL_ID].documents.[DOC_ID].[ACTION]
         const eventParts = eventType?.split('.') ?? [];
-        // Correct indices: ID is at index 4, Action is at index 5
-        const documentId = eventParts.length > 4 ? eventParts[4] : null;
-        const action = eventParts.length > 5 ? eventParts[5] : null;
+        const expectedLength = 7; // databases.db.collections.col.documents.doc.action
 
-        // This function should only react to 'create' events for posts
+        // **** CORRECT INDICES ****
+        const documentId = eventParts.length >= expectedLength ? eventParts[5] : null; // Document ID is at index 5
+        const action = eventParts.length >= expectedLength ? eventParts[6] : null;     // Action is at index 6
+        // ************************
+
+        log(`Attempting to parse event: ${eventType}`); // Log the full event string
+
+        if (!documentId || documentId === 'documents' || documentId.length < 5) { // Basic sanity check on ID format
+            error(`Could not extract valid document ID from event header: ${eventType}. Extracted ID: '${documentId}'`);
+            return res.json({ success: false, error: 'Could not identify document ID from event.' }, 400);
+        }
+
+        if (!action || !['create', 'update', 'delete'].includes(action)) {
+            error(`Could not extract valid action from event header: ${eventType}. Extracted Action: '${action}'`);
+            return res.json({ success: false, error: 'Could not identify action from event.' }, 400);
+        }
+
+        log(`Extracted - Document ID: ${documentId}, Action: ${action}`);
+
+        // --- This function only reacts to 'create' events for posts ---
         if (action !== 'create') {
-             log(`Ignoring event action '${action}' for produceForumPostEvent.`);
+             log(`Ignoring event action '${action}' for produceForumPostEvent (only handling 'create').`);
              return res.json({ success: true, message: `Ignoring action: ${action}` });
         }
 
-        if (!documentId) {
-            error(`Could not extract document ID from event header: ${eventType}`);
-            return res.json({ success: false, error: 'Could not identify document from event.' }, 400);
-        }
-        log(`Extracted document ID: ${documentId}, Action: ${action}`);
-
-
-        // --- Fetch the Post Document Manually ---
-        // Since the payload might be missing, fetch the document using the ID
+        // --- Handle Payload vs. Fetch ---
         let postDocument;
-        try {
-            log(`Fetching post document: ${documentId}`);
-            postDocument = await databases.getDocument(APPWRITE_DATABASE_ID, FORUM_POSTS_COLLECTION_ID, documentId);
-            log(`Fetched post document successfully.`); // Don't log full content unless debugging
-        } catch (fetchError) {
-            error(`Error fetching post document ${documentId}: ${fetchError.message}`);
-            // If fetch fails even on create, something is wrong (permissions?)
-            if (fetchError.response) {
-                 error(`Appwrite fetch error details: ${safeJsonStringify(fetchError.response)}`);
-            }
-            throw fetchError; // Rethrow fetch errors to be caught by the main handler
+        let payloadData = null;
+
+        // 1. Try parsing payload
+        if (req.payload && typeof req.payload === 'string' && req.payload.trim() !== '') {
+             try {
+                 payloadData = JSON.parse(req.payload);
+                 log('Successfully parsed req.payload for post event.');
+                 // Basic validation of payload data
+                 if (payloadData.$id && payloadData.topicId && payloadData.userId && payloadData.content) {
+                      log(`Using post data from payload for ID: ${payloadData.$id}`);
+                      postDocument = payloadData;
+                 } else {
+                      log('Payload parsed but missing essential fields (e.g., $id, topicId, userId, content). Will attempt fetch.');
+                      payloadData = null; // Clear invalid payload
+                 }
+             } catch (parseError) {
+                 error(`Failed to parse req.payload JSON: ${parseError.message}. Raw snippet: ${req.payload.substring(0,100)}... Will attempt fetch.`);
+             }
+        } else {
+            log('Request payload is missing or empty. Will attempt fetch.');
         }
 
-        // --- Validate Fetched Document ---
-        // Ensure the fetched document has the necessary fields
-        if (!postDocument || !postDocument.$id || !postDocument.topicId || !postDocument.userId || !postDocument.content || !postDocument.$createdAt) {
-            error('Fetched post document missing essential fields ($id, topicId, userId, content, $createdAt).');
-            return res.json({ success: false, error: 'Fetched post data invalid.' }, 500); // Internal error state
+        // 2. Fetch manually ONLY if payload wasn't available or valid
+        if (!postDocument) {
+             try {
+                 log(`Fetching post document manually: ${documentId}`);
+                 postDocument = await databases.getDocument(APPWRITE_DATABASE_ID, FORUM_POSTS_COLLECTION_ID, documentId);
+                 log(`Fetched post document successfully.`);
+             } catch (fetchError) {
+                 error(`Error fetching post document ${documentId}: ${fetchError.message}`);
+                 if (fetchError.response) {
+                      error(`Appwrite fetch error details: ${safeJsonStringify(fetchError.response)}`);
+                 }
+                 // If fetch fails even on create, likely permissions or config issue
+                 throw fetchError; // Rethrow fetch errors to be caught by the main handler
+             }
         }
-        log(`Processing valid post event for post ID: ${postDocument.$id}`);
+
+        // --- Validate Final Document ---
+        // Ensure the document (from payload or fetch) has the necessary fields
+        if (!postDocument || !postDocument.$id || !postDocument.topicId || !postDocument.userId || !postDocument.content || !postDocument.$createdAt) {
+            error('Post document data is invalid or missing essential fields ($id, topicId, userId, content, $createdAt) after payload check and fetch attempt.');
+            return res.json({ success: false, error: 'Fetched or parsed post data invalid.' }, 500); // Internal error state
+        }
+        log(`Processing valid 'create' event for post ID: ${postDocument.$id}`);
 
         // --- Prepare Event Data ---
-        // Use the fetched document data as the payload
+        // Use the final postDocument data as the payload
         const eventData = {
-            // type: 'new_post', // Type is implicit via topic/handled by backend consumer
-            ...postDocument // Spread the entire fetched Appwrite document payload
+            // Type is implicit via topic/handled by backend consumer
+            ...postDocument // Spread the entire Appwrite document payload
         };
         const eventDataString = safeJsonStringify(eventData);
         if (!eventDataString) {
@@ -127,7 +165,7 @@ module.exports = async ({ req, res, log, error }) => {
                         resolve(); // Resolve the promise on successful send
                     } catch (sendError) {
                          error(`WebSocket send error: ${sendError.message}`);
-                         if (ws && ws.readyState !== WebSocket.CLOSED) ws.close(1011, "Send error");
+                         if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) ws.close(1011, "Send error");
                          reject(sendError); // Reject the promise
                     }
                 });
@@ -146,10 +184,12 @@ module.exports = async ({ req, res, log, error }) => {
                     clearTimeout(connectionTimeout);
                     const reasonString = reason?.toString() || 'No reason provided';
                     log(`WebSocket closed. Code: ${code}, Reason: ${reasonString}`);
-                    // If code is not 1000 (Normal Closure), consider it an error if not already handled
+                    // Check if the promise was already settled
+                    // If code is not 1000 (Normal Closure), consider it an error only if not already handled
                     if (code !== 1000 && code !== 1005 /* No Status Received */) {
-                         // Avoid rejecting if already resolved/rejected
-                         reject(new Error(`WebSocket closed unexpectedly with code ${code}: ${reasonString}`));
+                        // This might reject an already settled promise, which is generally okay but noisy.
+                        // A more complex state machine could track if resolved/rejected already.
+                        reject(new Error(`WebSocket closed unexpectedly with code ${code}: ${reasonString}`));
                     }
                     // If resolved previously in 'open', this is fine.
                 });
@@ -157,10 +197,15 @@ module.exports = async ({ req, res, log, error }) => {
                  // Timeout for the connection attempt
                  connectionTimeout = setTimeout(() => {
                      error("WebSocket connection timed out.");
-                     if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
-                        ws.terminate(); // Force close
+                     if (ws && ws.readyState !== WebSocket.OPEN && ws.readyState !== WebSocket.CLOSING) {
+                        ws.terminate(); // Force close if stuck connecting
+                        reject(new Error("WebSocket connection timeout"));
+                     } else if (ws && ws.readyState === WebSocket.OPEN) {
+                        log("Connection timed out but WS was open (likely send/close issue).");
+                        // Might have already been handled by send error or close event
+                     } else {
+                         reject(new Error("WebSocket connection timeout (state unknown)."));
                      }
-                     reject(new Error("WebSocket connection timeout"));
                  }, 10000); // 10 seconds
 
             } catch (initError) {
@@ -175,7 +220,7 @@ module.exports = async ({ req, res, log, error }) => {
         return res.json({ success: true, message: 'Post event sent via WebSocket.' });
 
     } catch (err) {
-        error(`Error in produceForumPostEvent: ${err.message || 'Unknown error'}`);
+        error(`Unhandled Error in produceForumPostEvent: ${err.message || 'Unknown error'}`);
         if (err.stack) error(err.stack);
         // Ensure WS is closed if an error occurred before or during the promise
         if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
