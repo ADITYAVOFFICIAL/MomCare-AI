@@ -42,7 +42,7 @@ const COMPLEX_MODEL_NAME: ChatCompletionCreateParamsBase['model'] = "llama3-70b-
 const SIMPLER_MODEL_NAME: ChatCompletionCreateParamsBase['model'] = "llama3-8b-8192";  // For general
 
 if (!API_KEY) {
-    console.error("CRITICAL ERROR: VITE_PUBLIC_GROQ_API_KEY missing.");
+    // console.error("CRITICAL ERROR: VITE_PUBLIC_GROQ_API_KEY missing.");
     // In a real app, you might want to throw an error or disable features relying on this.
 }
 
@@ -174,7 +174,7 @@ const parseAndValidateRecommendations = (responseText: string, context: string):
     const jsonEndIndex = cleanedJsonString.lastIndexOf(']');
 
     if (jsonStartIndex === -1 || jsonEndIndex === -1 || jsonEndIndex < jsonStartIndex) {
-        console.error(`[${context}] Could not find valid JSON array structure in response:`, responseText);
+        // console.error(`[${context}] Could not find valid JSON array structure in response:`, responseText);
         throw new Error(`AI response for ${context} recommendations did not contain a recognizable JSON array.`);
     }
     cleanedJsonString = cleanedJsonString.substring(jsonStartIndex, jsonEndIndex + 1);
@@ -182,24 +182,26 @@ const parseAndValidateRecommendations = (responseText: string, context: string):
     try {
         const parsedData: unknown = JSON.parse(cleanedJsonString);
         if (!Array.isArray(parsedData)) {
-            console.error(`[${context}] Parsed Groq response is not an array:`, parsedData);
+            // console.error(`[${context}] Parsed Groq response is not an array:`, parsedData);
             throw new Error(`AI response for ${context} recommendations was not in the expected JSON array format after cleaning.`);
         }
 
         const validatedRecommendations: ProductRecommendation[] = parsedData
             .map((item: unknown, index: number): ProductRecommendation | null => {
                 if (typeof item !== 'object' || item === null) {
-                    console.warn(`[${context}] Recommendation item ${index} is not an object:`, item);
+                    // console.warn(`[${context}] Recommendation item ${index} is not an object:`, item);
                     return null;
                 }
                 const record = item as Record<string, unknown>;
                 const name = record.name;
                 const description = record.description;
                 if (typeof name !== 'string' || !name.trim()) {
-                    console.warn(`[${context}] Item ${index} missing or invalid 'name':`, item); return null;
+                    // console.warn(`[${context}] Item ${index} missing or invalid 'name':`, item); 
+                    return null;
                 }
                 if (typeof description !== 'string' || !description.trim()) {
-                    console.warn(`[${context}] Item ${index} missing or invalid 'description':`, item); return null;
+                    // console.warn(`[${context}] Item ${index} missing or invalid 'description':`, item); 
+                    return null;
                 }
 
                 // Handle optional fields safely
@@ -212,7 +214,7 @@ const parseAndValidateRecommendations = (responseText: string, context: string):
                 const finalReasoning = (typeof reasoning === 'string' && reasoning.trim()) ? reasoning.trim() : undefined; // Validate reasoning
 
                 if (finalCategory && !VALID_PRODUCT_CATEGORIES.includes(finalCategory as ProductCategory)) {
-                     console.warn(`[${context}] Item ${index} has unexpected category '${finalCategory}':`, item);
+                    //  console.warn(`[${context}] Item ${index} has unexpected category '${finalCategory}':`, item);
                 }
 
                 return {
@@ -229,13 +231,13 @@ const parseAndValidateRecommendations = (responseText: string, context: string):
         if (validatedRecommendations.length === 0 && parsedData.length > 0) {
             throw new Error(`AI response items for ${context} recommendations lacked required fields or had invalid types.`);
         }
-        console.log(`Successfully parsed ${validatedRecommendations.length} valid ${context} recommendations.`);
+        // console.log(`Successfully parsed ${validatedRecommendations.length} valid ${context} recommendations.`);
         return validatedRecommendations;
 
     } catch (parseError: unknown) {
-        console.error(`Failed to parse ${context} Groq JSON response:`, parseError);
-        console.error(`Cleaned ${context} JSON string attempt:`, cleanedJsonString);
-        console.error(`Original ${context} response text received:`, responseText);
+        // console.error(`Failed to parse ${context} Groq JSON response:`, parseError);
+        // console.error(`Cleaned ${context} JSON string attempt:`, cleanedJsonString);
+        // console.error(`Original ${context} response text received:`, responseText);
         throw new Error(`Failed to parse AI recommendations (${context}). ${parseError instanceof Error ? `Error: ${parseError.message}` : 'Invalid format received.'}`);
     }
 };
@@ -265,13 +267,13 @@ const _fetchAndParseGroqRecommendations = async (
     };
 
      try {
-        console.log(`Sending ${contextLabel} recommendation request to Groq model: ${modelName}...`);
+        // console.log(`Sending ${contextLabel} recommendation request to Groq model: ${modelName}...`);
         const chatCompletion: ChatCompletion = await groq.chat.completions.create(params);
-        console.log(`Received ${contextLabel} recommendation response.`);
+        // console.log(`Received ${contextLabel} recommendation response.`);
         const choice = chatCompletion.choices?.[0];
         const responseText = choice?.message?.content;
         const finishReason = choice?.finish_reason;
-        console.log(`Groq ${contextLabel} recommendations finished. Reason: ${finishReason}.`);
+        // console.log(`Groq ${contextLabel} recommendations finished. Reason: ${finishReason}.`);
 
         if (finishReason !== 'stop' && finishReason !== 'length') {
              if (typeof finishReason === 'string' && finishReason.toLowerCase().includes('filter')) {
@@ -286,7 +288,7 @@ const _fetchAndParseGroqRecommendations = async (
         return parseAndValidateRecommendations(responseText, contextLabel);
 
     } catch (error: unknown) {
-        console.error(`Error during ${contextLabel} Groq fetch/parse:`, error);
+        // console.error(`Error during ${contextLabel} Groq fetch/parse:`, error);
         if (error instanceof Groq.APIError) {
             if (error.status === 429) {
                  throw new Error(`Product recommendation service (${contextLabel}) is temporarily unavailable due to rate limits (Code: ${error.status}). Please try again shortly.`);

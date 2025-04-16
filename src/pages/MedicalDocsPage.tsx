@@ -76,7 +76,7 @@ const MedicalDocsPage = () => {
       const docs = await getUserMedicalDocuments(user.$id);
       setDocuments(docs);
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      // console.error('Error fetching documents:', error);
       toast({
         title: "Failed to fetch documents",
         description: "Please try again later.",
@@ -122,7 +122,7 @@ const MedicalDocsPage = () => {
       // Refresh document list
       fetchDocuments();
     } catch (error) {
-      console.error('Error uploading document:', error);
+      // console.error('Error uploading document:', error);
       toast({
         title: "Upload failed",
         // Provide more context if possible, but avoid leaking sensitive info
@@ -161,7 +161,7 @@ const MedicalDocsPage = () => {
         description: "The document has been permanently deleted.",
       });
     } catch (error) {
-      console.error('Error deleting document:', error);
+      // console.error('Error deleting document:', error);
       toast({
         title: "Delete failed",
         description: error instanceof Error ? error.message : "Please try again later.",
@@ -210,7 +210,7 @@ const MedicalDocsPage = () => {
       // getFilePreview now returns a URL object, convert to string for src/href
       return getFilePreview(fileId, bucketId).toString();
     } catch (error) {
-      console.error("Error getting preview URL:", error);
+      // console.error("Error getting preview URL:", error);
       return ''; // Return empty string or a placeholder URL
     }
   };

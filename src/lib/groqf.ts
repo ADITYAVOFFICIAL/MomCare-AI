@@ -25,7 +25,7 @@ const MODEL_NAME: ChatCompletionCreateParamsBase['model'] = "llama3-70b-8192"; /
 
 // Check if the API key is configured
 if (!API_KEY) {
-    console.error("CRITICAL: VITE_PUBLIC_GROQ_API_KEY environment variable is not set. Groq formatting service will be unavailable.");
+    // console.error("CRITICAL: VITE_PUBLIC_GROQ_API_KEY environment variable is not set. Groq formatting service will be unavailable.");
     // Depending on application requirements, you might throw an error here to halt execution
     // or allow the application to continue with degraded functionality.
     // throw new Error("Groq API Key is missing. Formatting feature disabled.");
@@ -129,14 +129,14 @@ Formatted Markdown Output:
 export const formatContentWithGroq = async (rawText: string): Promise<string> => {
     // 1. Check Initialization and Input
     if (!groq) {
-        console.error("Groq AI client is not initialized. Formatting unavailable.");
+        // console.error("Groq AI client is not initialized. Formatting unavailable.");
         // Throwing an error here is appropriate as the function cannot proceed.
         throw new Error("Groq AI client is not initialized. Check API Key.");
     }
     // Use optional chaining and trim for robust input checking
     const trimmedInput = rawText?.trim();
     if (!trimmedInput) {
-        console.warn("formatContentWithGroq called with empty or whitespace-only input.");
+        // console.warn("formatContentWithGroq called with empty or whitespace-only input.");
         // Return empty string for empty input, fulfilling the Promise<string> return type.
         return "";
     }
@@ -157,15 +157,15 @@ export const formatContentWithGroq = async (rawText: string): Promise<string> =>
 
     // 3. Execute API Call and Handle Response
     try {
-        console.log(`Sending formatting request to Groq model: ${MODEL_NAME}...`);
+        // console.log(`Sending formatting request to Groq model: ${MODEL_NAME}...`);
         const chatCompletion: ChatCompletion = await groq.chat.completions.create(params);
-        console.log("Received formatting response from Groq.");
+        // console.log("Received formatting response from Groq.");
 
         // Validate the response structure
         const choice = chatCompletion.choices?.[0]; // Use optional chaining
 
         if (!choice) {
-            console.error("Groq Formatting Error: No choices array or first choice missing in the response.", chatCompletion);
+            // console.error("Groq Formatting Error: No choices array or first choice missing in the response.", chatCompletion);
             throw new Error("AI formatter returned an invalid response structure (no choices).");
         }
 
@@ -173,34 +173,34 @@ export const formatContentWithGroq = async (rawText: string): Promise<string> =>
         // Use optional chaining for message and content access
         const formattedText = choice.message?.content;
 
-        console.log(`Groq formatting finished. Reason: ${finishReason}. Content received: ${formattedText !== null && formattedText !== undefined}`);
+        // console.log(`Groq formatting finished. Reason: ${finishReason}. Content received: ${formattedText !== null && formattedText !== undefined}`);
 
         // --- Analyze Finish Reason and Content ---
 
         // Handle potential content filtering or other non-standard stops first
         if (finishReason !== 'stop' && finishReason !== 'length') {
             if (typeof finishReason === 'string' && finishReason.toLowerCase().includes('filter')) {
-                console.warn(`Groq Formatting Blocked: Finish reason suggests content filtering (${finishReason}).`);
+                // console.warn(`Groq Formatting Blocked: Finish reason suggests content filtering (${finishReason}).`);
                 throw new Error(`Content formatting was blocked due to safety or content guidelines.`);
             } else if (finishReason === 'tool_calls') {
-                console.warn(`Groq Formatting Warning: Model unexpectedly attempted tool usage.`);
+                // console.warn(`Groq Formatting Warning: Model unexpectedly attempted tool usage.`);
                 throw new Error(`Formatting failed: AI model attempted an unexpected action (tool use).`);
             } else {
                 // Handle other unexpected non-stop reasons
-                console.error(`Groq Formatting Error: Unexpected finish reason: ${finishReason}`);
+                // console.error(`Groq Formatting Error: Unexpected finish reason: ${finishReason}`);
                 throw new Error(`Formatting stopped unexpectedly. Reason: ${finishReason}.`);
             }
         }
 
         // Handle potential length truncation (still return partial content if available)
         if (finishReason === 'length') {
-            console.warn("Groq Formatting Warning: Output may be truncated because the maximum token limit was reached.");
+            // console.warn("Groq Formatting Warning: Output may be truncated because the maximum token limit was reached.");
         }
 
         // --- Validate Formatted Content ---
         // Check strictly for null or undefined, as an empty string "" is a valid response
         if (formattedText === null || formattedText === undefined) {
-            console.warn("Groq Formatting Warning: Response received successfully, but the message content is null or undefined.");
+            // console.warn("Groq Formatting Warning: Response received successfully, but the message content is null or undefined.");
             // Throw an error as we expect a string, even if empty
             throw new Error("AI formatter returned empty content unexpectedly.");
         }
@@ -208,22 +208,22 @@ export const formatContentWithGroq = async (rawText: string): Promise<string> =>
         // If the model returns an empty string or only whitespace, respect it, but log a warning.
         const trimmedOutput = formattedText.trim();
         if (trimmedOutput.length === 0 && formattedText.length > 0) {
-            console.warn("Groq Formatting Warning: Formatted content consists only of whitespace.");
+            // console.warn("Groq Formatting Warning: Formatted content consists only of whitespace.");
             return ""; // Return empty string if only whitespace
         } else if (trimmedOutput.length === 0) {
-            console.warn("Groq Formatting Warning: Formatted content is an empty string.");
+            // console.warn("Groq Formatting Warning: Formatted content is an empty string.");
             return ""; // Return empty string if truly empty
         }
 
         // --- Success ---
-        console.log("Groq formatting successful.");
+        // console.log("Groq formatting successful.");
         // Return the trimmed, formatted Markdown.
         return trimmedOutput;
 
     // 4. Handle Errors during API Call
     } catch (error: unknown) {
         // Log the raw error for debugging purposes
-        console.error('Error during Groq formatting API call:', error);
+        // console.error('Error during Groq formatting API call:', error);
 
         // Type checking for specific error types
         if (error instanceof Groq.APIError) {
@@ -231,7 +231,7 @@ export const formatContentWithGroq = async (rawText: string): Promise<string> =>
             const status = error.status ?? 'N/A'; // Use nullish coalescing for potentially undefined status
             const errName = error.name ?? 'Unknown API Error';
             const errMessage = error.message ?? 'No message provided.';
-            console.error(`Groq API Error: Status ${status}, Type: ${errName}, Message: ${errMessage}`);
+            // console.error(`Groq API Error: Status ${status}, Type: ${errName}, Message: ${errMessage}`);
 
             // Provide user-friendly error messages based on status code
             if (status === 401 || status === 403) {
@@ -260,7 +260,7 @@ export const formatContentWithGroq = async (rawText: string): Promise<string> =>
             throw error;
         } else {
             // Catch-all for non-standard error types (e.g., strings thrown)
-            console.error('An unknown error type was caught:', error);
+            // console.error('An unknown error type was caught:', error);
             throw new Error('An unexpected error occurred during content formatting.');
         }
     }

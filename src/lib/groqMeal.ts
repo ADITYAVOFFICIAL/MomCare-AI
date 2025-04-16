@@ -120,7 +120,7 @@ const MODEL_NAME: ChatCompletionCreateParamsBase['model'] = "llama3-70b-8192";
 
 // Validate API Key presence
 if (!API_KEY) {
-    console.error("CRITICAL ERROR: VITE_PUBLIC_GROQ_API_KEY is missing. Meal/Exercise generation will be unavailable.");
+    // console.error("CRITICAL ERROR: VITE_PUBLIC_GROQ_API_KEY is missing. Meal/Exercise generation will be unavailable.");
     // NOTE: In a production environment, you might throw an Error here
     // to prevent the application module from loading incorrectly.
     // throw new Error("Groq API Key is missing. Cannot initialize groqMealService.");
@@ -301,7 +301,7 @@ const parseAndValidateContent = (responseText: string, requestedContentType: Gen
     const jsonEndIndex = cleanedJsonString.lastIndexOf('}');
 
     if (jsonStartIndex === -1 || jsonEndIndex === -1 || jsonEndIndex < jsonStartIndex) {
-        console.error("Validation Error: Response missing JSON object structure:", responseText);
+        // console.error("Validation Error: Response missing JSON object structure:", responseText);
         throw new Error("AI response did not contain a recognizable JSON object.");
     }
     cleanedJsonString = cleanedJsonString.substring(jsonStartIndex, jsonEndIndex + 1);
@@ -310,8 +310,8 @@ const parseAndValidateContent = (responseText: string, requestedContentType: Gen
     try {
         parsedData = JSON.parse(cleanedJsonString);
     } catch (parseError: unknown) {
-        console.error("Validation Error: Failed to parse AI JSON:", parseError);
-        console.error("Cleaned JSON string:", cleanedJsonString);
+        // console.error("Validation Error: Failed to parse AI JSON:", parseError);
+        // console.error("Cleaned JSON string:", cleanedJsonString);
         throw new Error(`Failed to parse AI suggestions. Invalid JSON format. ${parseError instanceof Error ? `Details: ${parseError.message}` : ''}`);
     }
 
@@ -329,22 +329,22 @@ const parseAndValidateContent = (responseText: string, requestedContentType: Gen
             if (requestedContentType === 'meals') {
                 throw new Error("Validation Error: AI response missing required 'meals' array when only meals were requested.");
             } else {
-                 console.warn("Validation Warning: AI response missing 'meals' array when 'both' were requested. Proceeding without meals.");
+                //  console.warn("Validation Warning: AI response missing 'meals' array when 'both' were requested. Proceeding without meals.");
                  // Allow proceeding if 'both' was requested, maybe exercises are valid
             }
         } else {
             // Process meals if the array exists
             validatedOutput.meals = potentialContent.meals
                 .map((item: unknown, index: number): MealIdea | null => {
-                    if (typeof item !== 'object' || item === null) { console.warn(`Validation Warning: Meal item ${index} is not an object.`); return null; }
+                    if (typeof item !== 'object' || item === null) { /*console.warn(`Validation Warning: Meal item ${index} is not an object.`);*/ return null; }
                     const meal = item as Record<string, unknown>;
 
                     // Required fields check
-                    if (typeof meal.name !== 'string' || !meal.name.trim()) { console.warn(`Validation Warning: Meal item ${index} invalid 'name'.`); return null; }
-                    if (typeof meal.description !== 'string' || !meal.description.trim()) { console.warn(`Validation Warning: Meal item ${index} invalid 'description'.`); return null; }
-                    if (typeof meal.mealType !== 'string' || !meal.mealType.trim()) { console.warn(`Validation Warning: Meal item ${index} invalid 'mealType'.`); return null; }
+                    if (typeof meal.name !== 'string' || !meal.name.trim()) { /*console.warn(`Validation Warning: Meal item ${index} invalid 'name'.`);*/ return null; }
+                    if (typeof meal.description !== 'string' || !meal.description.trim()) { /*console.warn(`Validation Warning: Meal item ${index} invalid 'description'.`);*/ return null; }
+                    if (typeof meal.mealType !== 'string' || !meal.mealType.trim()) { /*console.warn(`Validation Warning: Meal item ${index} invalid 'mealType'.`);*/ return null; }
                     // Preparation steps are now expected
-                    if (!Array.isArray(meal.preparationSteps)) { console.warn(`Validation Warning: Meal item ${index} ('${meal.name}') missing or invalid 'preparationSteps' (must be an array).`); return null; }
+                    if (!Array.isArray(meal.preparationSteps)) { /*console.warn(`Validation Warning: Meal item ${index} ('${meal.name}') missing or invalid 'preparationSteps' (must be an array).`);*/ return null; }
 
                     // Optional & New Fields Validation & Cleaning
                     const keyIngredients = Array.isArray(meal.keyIngredients) ? meal.keyIngredients.filter((k): k is string => typeof k === 'string' && !!k.trim()).map(k => k.trim()) : [];
@@ -373,14 +373,14 @@ const parseAndValidateContent = (responseText: string, requestedContentType: Gen
                 .filter((item): item is MealIdea => item !== null);
 
             if (validatedOutput.meals.length < potentialContent.meals.length) {
-                console.warn(`Validation Warning: Filtered out ${potentialContent.meals.length - validatedOutput.meals.length} invalid meal items.`);
+                // console.warn(`Validation Warning: Filtered out ${potentialContent.meals.length - validatedOutput.meals.length} invalid meal items.`);
             }
             if (validatedOutput.meals.length === 0 && potentialContent.meals.length > 0) {
-                console.error("Validation Error: AI 'meals' array contained no valid items after validation.");
+                // console.error("Validation Error: AI 'meals' array contained no valid items after validation.");
             }
         }
     } else if (potentialContent.hasOwnProperty('meals')) {
-         console.warn("Validation Warning: AI included 'meals' key when not requested.");
+        //  console.warn("Validation Warning: AI included 'meals' key when not requested.");
     }
 
 
@@ -390,7 +390,7 @@ const parseAndValidateContent = (responseText: string, requestedContentType: Gen
              if (requestedContentType === 'exercises') {
                 throw new Error("Validation Error: AI response missing required 'exercises' array when only exercises were requested.");
              } else {
-                 console.warn("Validation Warning: AI response missing 'exercises' array when 'both' were requested. Proceeding without exercises.");
+                //  console.warn("Validation Warning: AI response missing 'exercises' array when 'both' were requested. Proceeding without exercises.");
              }
         } else if (!Array.isArray(potentialContent.exercises)) {
              throw new Error(`Validation Error: AI response 'exercises' field is not an array (Type: ${typeof potentialContent.exercises}).`);
@@ -398,12 +398,12 @@ const parseAndValidateContent = (responseText: string, requestedContentType: Gen
             // Process exercises if the array exists and is valid
             validatedOutput.exercises = potentialContent.exercises
                 .map((item: unknown, index: number): ExerciseSuggestion | null => {
-                    if (typeof item !== 'object' || item === null) { console.warn(`Validation Warning: Exercise item ${index} not an object.`); return null; }
+                    if (typeof item !== 'object' || item === null) { /*console.warn(`Validation Warning: Exercise item ${index} not an object.`);*/ return null; }
                     const ex = item as Record<string, unknown>;
-                    if (typeof ex.name !== 'string' || !ex.name.trim()) { console.warn(`Validation Warning: Ex item ${index} invalid 'name'.`); return null; }
-                    if (typeof ex.description !== 'string' || !ex.description.trim()) { console.warn(`Validation Warning: Ex item ${index} invalid 'description'.`); return null; }
-                    if (typeof ex.intensity !== 'string' || !ex.intensity.trim()) { console.warn(`Validation Warning: Ex item ${index} invalid 'intensity'.`); return null; }
-                    if (typeof ex.safetyNotes !== 'string' || !ex.safetyNotes.trim()) { console.warn(`Validation Warning: Ex item ${index} invalid 'safetyNotes'.`); return null; }
+                    if (typeof ex.name !== 'string' || !ex.name.trim()) { /*console.warn(`Validation Warning: Ex item ${index} invalid 'name'.`);*/ return null; }
+                    if (typeof ex.description !== 'string' || !ex.description.trim()) { /*console.warn(`Validation Warning: Ex item ${index} invalid 'description'.`);*/ return null; }
+                    if (typeof ex.intensity !== 'string' || !ex.intensity.trim()) { /*console.warn(`Validation Warning: Ex item ${index} invalid 'intensity'.`);*/ return null; }
+                    if (typeof ex.safetyNotes !== 'string' || !ex.safetyNotes.trim()) { /*console.warn(`Validation Warning: Ex item ${index} invalid 'safetyNotes'.`);*/ return null; }
 
                     const durationReps = (typeof ex.durationReps === 'string' && ex.durationReps.trim()) ? ex.durationReps.trim() : undefined;
                     const focusArea = (typeof ex.focusArea === 'string' && ex.focusArea.trim()) ? ex.focusArea.trim() : undefined;
@@ -418,17 +418,17 @@ const parseAndValidateContent = (responseText: string, requestedContentType: Gen
                 .filter((item): item is ExerciseSuggestion => item !== null);
 
             if (validatedOutput.exercises.length < potentialContent.exercises.length) {
-                console.warn(`Validation Warning: Filtered out ${potentialContent.exercises.length - validatedOutput.exercises.length} invalid exercise items.`);
+                // console.warn(`Validation Warning: Filtered out ${potentialContent.exercises.length - validatedOutput.exercises.length} invalid exercise items.`);
             }
             if (validatedOutput.exercises.length === 0 && potentialContent.exercises.length > 0) {
-                console.error("Validation Error: AI 'exercises' array contained no valid items after validation.");
+                // console.error("Validation Error: AI 'exercises' array contained no valid items after validation.");
             }
         }
     } else if (potentialContent.hasOwnProperty('exercises')) {
-         console.warn("Validation Warning: AI included 'exercises' key when not requested.");
+        //  console.warn("Validation Warning: AI included 'exercises' key when not requested.");
     }
 
-    console.log(`Validation Complete: Found ${validatedOutput.meals.length} valid meals, ${validatedOutput.exercises.length} valid exercises.`);
+    // console.log(`Validation Complete: Found ${validatedOutput.meals.length} valid meals, ${validatedOutput.exercises.length} valid exercises.`);
     return validatedOutput;
 };
 
@@ -462,14 +462,14 @@ export const generatePersonalizedContent = async (
     };
 
     try {
-        console.log(`Sending personalization request to Groq (requesting: ${contentType})...`);
+        // console.log(`Sending personalization request to Groq (requesting: ${contentType})...`);
         const chatCompletion: ChatCompletion = await groq.chat.completions.create(params);
-        console.log("Received personalization response from Groq.");
+        // console.log("Received personalization response from Groq.");
 
         const choice = chatCompletion.choices?.[0];
         const responseText = choice?.message?.content;
         const finishReason = choice?.finish_reason;
-        console.log(`Groq generation finished. Reason: ${finishReason || 'N/A'}.`);
+        // console.log(`Groq generation finished. Reason: ${finishReason || 'N/A'}.`);
 
         if (finishReason !== 'stop' && finishReason !== 'length') {
             if (typeof finishReason === 'string' && finishReason.toLowerCase().includes('filter')) {
@@ -478,23 +478,23 @@ export const generatePersonalizedContent = async (
             throw new Error(`AI generation stopped unexpectedly (Reason: ${finishReason || 'unknown'}).`);
         }
         if (!responseText && finishReason !== 'stop') {
-            if (finishReason === 'length') { console.warn("AI response content empty/null, reason 'length'. Attempting parse (may fail)."); }
+            if (finishReason === 'length') { /*console.warn("AI response content empty/null, reason 'length'. Attempting parse (may fail).");*/ }
             else { throw new Error(`AI returned unexpected empty content (Reason: ${finishReason}).`); }
         }
         if (responseText === "" && finishReason === 'stop') {
-             console.warn("AI returned empty string response. Returning empty suggestions.");
+            //  console.warn("AI returned empty string response. Returning empty suggestions.");
              return { meals: [], exercises: [] };
         }
-        if (finishReason === 'length') { console.warn("AI response may be truncated. JSON/Suggestions might be incomplete."); }
+        if (finishReason === 'length') { /*console.warn("AI response may be truncated. JSON/Suggestions might be incomplete.");*/ }
         if (responseText === null || responseText === undefined) {
-             console.error("Response text null/undefined despite finish reason. Cannot parse.");
+            //  console.error("Response text null/undefined despite finish reason. Cannot parse.");
              throw new Error("AI response content was unexpectedly null or undefined.");
         }
 
         return parseAndValidateContent(responseText, contentType);
 
     } catch (error: unknown) {
-        console.error(`Error during Groq personalization fetch/parse (Type: ${contentType}):`, error);
+        // console.error(`Error during Groq personalization fetch/parse (Type: ${contentType}):`, error);
         if (error instanceof Groq.APIError) {
             const status = error.status ?? 'N/A';
             const message = error.message || 'Unknown API error.';

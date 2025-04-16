@@ -58,31 +58,31 @@ import {
 // Returns a Date object or null if parsing fails
 const parseAppointmentDateTime = (app: Appointment): Date | null => {
     if (!app || !app.date || !app.time) {
-        console.error('parseAppointmentDateTime: Invalid appointment data received', app);
+        // console.error('parseAppointmentDateTime: Invalid appointment data received', app);
         return null;
     }
     try {
         const appDate = parseISO(app.date);
         if (isNaN(appDate.getTime())) {
-            console.error('parseAppointmentDateTime: Invalid date format:', app.date);
+            // console.error('parseAppointmentDateTime: Invalid date format:', app.date);
             return null;
         }
         const timeParts = app.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
         if (!timeParts) {
-            console.error('parseAppointmentDateTime: Invalid time format:', app.time);
+            // console.error('parseAppointmentDateTime: Invalid time format:', app.time);
             return null;
         }
         let hours = parseInt(timeParts[1], 10); const minutes = parseInt(timeParts[2], 10);
         const period = timeParts[3]?.toUpperCase();
         if (isNaN(hours) || isNaN(minutes) || minutes < 0 || minutes > 59) {
-             console.error('parseAppointmentDateTime: Invalid hours or minutes:', app.time);
+            //  console.error('parseAppointmentDateTime: Invalid hours or minutes:', app.time);
              return null;
         }
         if (period) { if (hours < 1 || hours > 12) return null; if (period === 'PM' && hours !== 12) hours += 12; else if (period === 'AM' && hours === 12) hours = 0; }
         else { if (hours < 0 || hours > 23) return null; }
         return new Date(appDate.getFullYear(), appDate.getMonth(), appDate.getDate(), hours, minutes);
     } catch (err) {
-        console.error('parseAppointmentDateTime: Unexpected error parsing:', err, app);
+        // console.error('parseAppointmentDateTime: Unexpected error parsing:', err, app);
         return null;
     }
 };
@@ -161,7 +161,7 @@ const AppointmentPage: React.FC = () => {
         });
       setUpcomingAppointments(upcoming);
     } catch (error: any) {
-      console.error('AppointmentPage: Error fetching appointments:', error);
+      // console.error('AppointmentPage: Error fetching appointments:', error);
       const errorMessage = error.message || 'Failed to load appointments. Please try refreshing.';
       setErrorAppointments(errorMessage);
       setUpcomingAppointments([]);
@@ -198,7 +198,7 @@ const AppointmentPage: React.FC = () => {
       setDate(undefined); setTime(undefined); setNotes(''); setAppointmentType('doctor');
       fetchAppointments(); // Refresh list
     } catch (error: any) {
-      console.error('Error booking appointment:', error);
+      // console.error('Error booking appointment:', error);
       toast({ title: "Booking Failed", description: error.message || "Could not book appointment.", variant: "destructive" });
     } finally {
       setIsBookingLoading(false);
@@ -229,7 +229,7 @@ const AppointmentPage: React.FC = () => {
       });
       fetchAppointments(); // Re-fetch
     } catch (error: any) {
-      console.error('Error deleting appointment:', error);
+      // console.error('Error deleting appointment:', error);
       toast({ title: "Deletion Failed", description: error.message || "Could not delete appointment.", variant: "destructive" });
     } finally {
       setDeletingAppointmentId(null);

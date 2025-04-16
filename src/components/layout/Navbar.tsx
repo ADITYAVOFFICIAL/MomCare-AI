@@ -104,7 +104,7 @@ const Navbar: React.FC = () => {
           setProfilePhotoUrl(null); // Reset if no photo ID found
         }
       } catch (error) {
-        console.error("Error fetching profile photo for navbar:", error);
+        // console.error("Error fetching profile photo for navbar:", error);
         if (isMounted) setProfilePhotoUrl(null); // Reset on error
       } finally {
          if (isMounted) setIsFetchingPhoto(false);
@@ -132,7 +132,7 @@ const Navbar: React.FC = () => {
       });
       navigate('/'); // Navigate to home after logout
     } catch (error) {
-      console.error("Logout failed:", error);
+      // console.error("Logout failed:", error);
       toast({
         title: "Logout failed",
         description: error instanceof Error ? error.message : "Please try again later.",
@@ -214,10 +214,6 @@ const Navbar: React.FC = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    <span>Dashboard</span>
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Profile Settings</span>

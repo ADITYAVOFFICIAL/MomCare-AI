@@ -11,9 +11,9 @@ const NotFound = () => {
 
   // Log the error for developers
   useEffect(() => {
-    console.error(
-      `404 Not Found: User attempted to access non-existent route: ${location.pathname}${location.search}${location.hash}`
-    );
+    // console.error(
+    //   `404 Not Found: User attempted to access non-existent route: ${location.pathname}${location.search}${location.hash}`
+    // );
   }, [location]); // Log whenever the full location changes
 
   return (

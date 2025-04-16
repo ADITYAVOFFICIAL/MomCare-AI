@@ -61,7 +61,7 @@ const MODEL_NAME: ChatCompletionCreateParamsBase['model'] = "llama3-70b-8192";
 
 // --- Initialization Check ---
 if (!API_KEY) {
-    console.error("CRITICAL ERROR: VITE_PUBLIC_GROQ_API_KEY is missing. Content moderation service will be unavailable.");
+    // console.error("CRITICAL ERROR: VITE_PUBLIC_GROQ_API_KEY is missing. Content moderation service will be unavailable.");
 }
 
 // --- Groq Client Initialization ---
@@ -182,7 +182,7 @@ const parseAndValidateModerationResult = (responseText: string | null | undefine
     };
 
     if (!responseText?.trim()) {
-        console.error("Moderation Error: Received empty or null response from Groq.");
+        // console.error("Moderation Error: Received empty or null response from Groq.");
         return { ...defaultErrorResult, reason: "Received empty response from AI." };
     }
 
@@ -197,13 +197,13 @@ const parseAndValidateModerationResult = (responseText: string | null | undefine
     try {
         parsedData = JSON.parse(cleanedJsonString);
     } catch (parseError: unknown) {
-        console.error("Moderation Error: Failed to parse AI JSON response:", parseError);
-        console.error("Received text:", responseText);
+        // console.error("Moderation Error: Failed to parse AI JSON response:", parseError);
+        // console.error("Received text:", responseText);
         return { ...defaultErrorResult, reason: `Invalid JSON format received from AI. ${parseError instanceof Error ? `Details: ${parseError.message}` : ''}` };
     }
 
     if (typeof parsedData !== 'object' || parsedData === null) {
-        console.error("Moderation Error: Parsed data is not an object.");
+        // console.error("Moderation Error: Parsed data is not an object.");
         return { ...defaultErrorResult, reason: "AI response was not a valid JSON object." };
     }
 
@@ -211,27 +211,27 @@ const parseAndValidateModerationResult = (responseText: string | null | undefine
 
     const decision = result.decision;
     if (!decision || !Object.values(ModerationDecision).includes(decision as ModerationDecision)) {
-        console.error(`Moderation Error: Invalid or missing 'decision' field. Received: ${decision}`);
+        // console.error(`Moderation Error: Invalid or missing 'decision' field. Received: ${decision}`);
         return { ...defaultErrorResult, reason: `Invalid decision value received: ${decision}` };
     }
 
     const reason = typeof result.reason === 'string' ? result.reason.trim() : undefined;
     if (decision !== ModerationDecision.ALLOW && !reason) {
-        console.warn(`Moderation Warning: Decision is ${decision} but 'reason' field is missing or empty.`);
+        // console.warn(`Moderation Warning: Decision is ${decision} but 'reason' field is missing or empty.`);
     }
 
     let flags: ModerationFlag[] = [];
     if (!Array.isArray(result.flags)) {
-        if (decision !== ModerationDecision.ALLOW) { console.warn(`Moderation Warning: Decision is ${decision} but 'flags' field is missing or not an array.`); }
+        if (decision !== ModerationDecision.ALLOW) { /*console.warn(`Moderation Warning: Decision is ${decision} but 'flags' field is missing or not an array.`);*/ }
         flags = [];
     } else {
         flags = result.flags.filter((flag: any): flag is ModerationFlag =>
             typeof flag === 'string' && Object.values(ModerationFlag).includes(flag as ModerationFlag)
         );
-        if (flags.length < result.flags.length) { console.warn(`Moderation Warning: Filtered out invalid flag values.`); }
+        if (flags.length < result.flags.length) { /*console.warn(`Moderation Warning: Filtered out invalid flag values.`);*/ }
     }
 
-    if (decision === ModerationDecision.ALLOW && flags.length > 0) { console.warn(`Moderation Warning: Decision is ALLOW but flags array is not empty. Clearing flags.`); flags = []; }
+    if (decision === ModerationDecision.ALLOW && flags.length > 0) { /*console.warn(`Moderation Warning: Decision is ALLOW but flags array is not empty. Clearing flags.`);*/ flags = []; }
     // Allow FLAG decision even without flags/reason, although not ideal
     // if (decision !== ModerationDecision.ALLOW && flags.length === 0 && !reason) { console.warn(`Moderation Warning: Decision is ${decision} but both flags and reason are missing/empty.`); }
 
@@ -242,7 +242,7 @@ const parseAndValidateModerationResult = (responseText: string | null | undefine
         originalContent: originalContent,
     };
 
-    console.log("Moderation Result:", validatedResult);
+    // console.log("Moderation Result:", validatedResult);
     return validatedResult;
 };
 
@@ -253,7 +253,7 @@ export const moderateContent = async (
     options?: ModerationOptions
 ): Promise<ModerationResult> => {
     if (!groq) {
-        console.error("Groq AI client (moderation) is not initialized.");
+        // console.error("Groq AI client (moderation) is not initialized.");
         return { decision: ModerationDecision.ERROR, reason: "Moderation service not configured.", flags: [], originalContent: contentToModerate };
     }
 
@@ -270,31 +270,31 @@ export const moderateContent = async (
     };
 
     try {
-        console.log(`Sending moderation request to Groq model: ${MODEL_NAME}...`);
+        // console.log(`Sending moderation request to Groq model: ${MODEL_NAME}...`);
         const chatCompletion: ChatCompletion = await groq.chat.completions.create(params);
-        console.log("Received moderation response from Groq.");
+        // console.log("Received moderation response from Groq.");
         const choice = chatCompletion.choices?.[0];
         const responseText = choice?.message?.content;
         const finishReason = choice?.finish_reason;
-        console.log(`Groq moderation finished. Reason: ${finishReason}. Content received: ${!!responseText}`);
+        // console.log(`Groq moderation finished. Reason: ${finishReason}. Content received: ${!!responseText}`);
 
         if (finishReason !== 'stop' && finishReason !== 'length') {
              if (typeof finishReason === 'string' && finishReason.toLowerCase().includes('filter')) {
-                 console.warn(`Moderation Blocked by Content Filter: Finish reason: ${finishReason}. Flagging content.`);
+                //  console.warn(`Moderation Blocked by Content Filter: Finish reason: ${finishReason}. Flagging content.`);
                  return { decision: ModerationDecision.FLAG, reason: "Content potentially blocked by AI safety filters.", flags: [ModerationFlag.OTHER], originalContent: trimmedContent };
              } else {
-                 console.error(`Groq Moderation Error: Unexpected finish reason: ${finishReason}`);
+                //  console.error(`Groq Moderation Error: Unexpected finish reason: ${finishReason}`);
                  return { decision: ModerationDecision.ERROR, reason: `Moderation stopped unexpectedly. Reason: ${finishReason}.`, flags: [], originalContent: trimmedContent };
              }
         }
          if (finishReason === 'length') {
-             console.warn("Groq Moderation Warning: Output potentially truncated.");
+            //  console.warn("Groq Moderation Warning: Output potentially truncated.");
          }
 
         return parseAndValidateModerationResult(responseText, trimmedContent);
 
     } catch (error: unknown) {
-        console.error('Error during Groq moderation API call:', error);
+        // console.error('Error during Groq moderation API call:', error);
         let reason = "An unexpected error occurred during content moderation.";
         if (error instanceof Groq.APIError) {
             const status = error.status ?? 'N/A'; const errMessage = error.message ?? 'No message provided.';

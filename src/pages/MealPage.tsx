@@ -206,7 +206,7 @@ const generateContent = useCallback(async (
   ) => {
   // Prevent overlapping calls
   if (isGenerating.current) {
-      console.warn("Generation already in progress, skipping.");
+    //   console.warn("Generation already in progress, skipping.");
       return;
   }
   isGenerating.current = true;
@@ -222,7 +222,7 @@ const generateContent = useCallback(async (
       return;
   }
 
-  console.log(`Attempting generation: Preference='${preference || "None"}', Count=${count}`);
+//   console.log(`Attempting generation: Preference='${preference || "None"}', Count=${count}`);
   if (isMounted.current) {
       setIsLoadingContent(true);
       setError(null); // Clear previous generation errors
@@ -241,14 +241,14 @@ const generateContent = useCallback(async (
       // Update state only if component is still mounted
       if (isMounted.current) {
           setPersonalizedContent(content);
-          console.log("Generation successful.");
+        //   console.log("Generation successful.");
       } else {
-          console.log("Component unmounted after generation finished, state not updated.");
+        //   console.log("Component unmounted after generation finished, state not updated.");
       }
 
   } catch (err: any) {
       const msg = err.message || "Failed to generate suggestions.";
-      console.error("Error during generateContent:", err);
+    //   console.error("Error during generateContent:", err);
       if (isMounted.current) {
           setError(msg); // Display the error
           setPersonalizedContent(null); // Clear any potentially partial content
@@ -262,7 +262,7 @@ const generateContent = useCallback(async (
       // Always reset flags, check mount status for state update
       if (isMounted.current) setIsLoadingContent(false);
       isGenerating.current = false; // Reset generation lock
-      console.log("generateContent finished.");
+    //   console.log("generateContent finished.");
   }
 }, [toast, navigate]); // Dependencies are stable hooks
 
@@ -274,7 +274,7 @@ useEffect(() => {
   let didCancel = false; // Cancellation flag for this effect run
 
   const fetchProfileAndInitialGenerate = async () => {
-      console.log("Running fetchProfileAndInitialGenerate Effect: Auth=", isAuthenticated, "User ID=", user?.$id);
+    //   console.log("Running fetchProfileAndInitialGenerate Effect: Auth=", isAuthenticated, "User ID=", user?.$id);
 
       // Guard: Exit if not authenticated or no user ID
       if (!isAuthenticated || !user?.$id) {
@@ -303,12 +303,12 @@ useEffect(() => {
               setIsProfileConsideredComplete(isComplete);
 
               if (isComplete) {
-                  console.log("Profile loaded and complete. Triggering initial generation.");
+                //   console.log("Profile loaded and complete. Triggering initial generation.");
                   // Call generateContent with current state values for preference/count
                   // No need to await this here unless subsequent logic depends on it immediately
                   generateContent(profile, customPreference, suggestionCount);
               } else {
-                  console.log("Profile loaded but incomplete. Redirecting to profile page.");
+                //   console.log("Profile loaded but incomplete. Redirecting to profile page.");
                   setError("Your profile is incomplete. Please update it for recommendations."); // User-friendly error
                   toast({
                       title: "Profile Update Needed",
@@ -322,7 +322,7 @@ useEffect(() => {
               }
           } else {
               // Profile document not found for this user
-              console.log("Profile document not found. Redirecting to profile page.");
+            //   console.log("Profile document not found. Redirecting to profile page.");
               setError("Profile not found. Please create or complete your profile.");
               setIsProfileConsideredComplete(false);
               toast({
@@ -336,7 +336,7 @@ useEffect(() => {
               });
           }
       } catch (err: any) {
-          console.error("Error during profile fetch/check:", err);
+        //   console.error("Error during profile fetch/check:", err);
           if (!didCancel) {
               setError(`Could not load profile data: ${err.message || 'Unknown error'}`);
               setUserProfile(null);
@@ -346,7 +346,7 @@ useEffect(() => {
       } finally {
           if (!didCancel) {
               setIsLoadingProfile(false); // Stop profile loading indicator
-              console.log("Profile fetch/check process finished.");
+            //   console.log("Profile fetch/check process finished.");
           }
       }
   };
@@ -355,7 +355,7 @@ useEffect(() => {
 
   // Cleanup function runs when component unmounts or dependencies change
   return () => {
-      console.log("MealPage effect cleanup.");
+    //   console.log("MealPage effect cleanup.");
       isMounted.current = false; // Mark as unmounted
       didCancel = true; // Signal async operations to abort state updates
   };

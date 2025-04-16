@@ -65,7 +65,7 @@ const formatDate = (dateInput: string | Date | undefined): string => {
             day: 'numeric',
         });
     } catch (error) {
-        console.error("Error formatting date:", error);
+        // console.error("Error formatting date:", error);
         return 'Invalid date format'; // More specific error
     }
 };
@@ -107,7 +107,7 @@ const BlogPostPage: React.FC = () => {
             return;
         }
 
-        console.log(`Fetching post with slug: ${slug}`);
+        // console.log(`Fetching post with slug: ${slug}`);
         setIsLoading(true);
         setError(null); // Clear previous errors
         setPost(null); // Clear previous post data
@@ -116,14 +116,14 @@ const BlogPostPage: React.FC = () => {
             const fetchedPost = await getBlogPostBySlug(slug);
             if (fetchedPost) {
                 setPost(fetchedPost);
-                console.log(`Post "${fetchedPost.title}" loaded successfully.`);
+                // console.log(`Post "${fetchedPost.title}" loaded successfully.`);
             } else {
                 setError(`Blog post with slug "${slug}" was not found.`);
                 setPost(null); // Ensure post is null if not found
-                console.warn(`Post with slug "${slug}" not found.`);
+                // console.warn(`Post with slug "${slug}" not found.`);
             }
         } catch (err: unknown) {
-            console.error(`Error fetching blog post with slug "${slug}":`, err);
+            // console.error(`Error fetching blog post with slug "${slug}":`, err);
             const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred while loading the post.";
             setError(errorMessage);
             toast({ title: "Error Loading Post", description: errorMessage, variant: "destructive" });
@@ -155,7 +155,7 @@ const BlogPostPage: React.FC = () => {
         }
 
         setIsDeleting(true); // Set deleting state for UI feedback
-        console.log(`Attempting to delete post: ${post.$id} (${post.title})`);
+        // console.log(`Attempting to delete post: ${post.$id} (${post.title})`);
 
         try {
             // Call the Appwrite function to delete the post document
@@ -165,7 +165,7 @@ const BlogPostPage: React.FC = () => {
             console.log(`Post ${post.$id} deleted successfully.`);
             navigate('/resources'); // Redirect to the main resources page after deletion
         } catch (error: unknown) {
-            console.error(`Error deleting post ${post.$id}:`, error);
+            // console.error(`Error deleting post ${post.$id}:`, error);
             const errorMessage = error instanceof Error ? error.message : "Could not delete the post due to an unknown error.";
             toast({ title: "Deletion Failed", description: errorMessage, variant: "destructive" });
             setIsDeleting(false); // Reset deleting state on failure

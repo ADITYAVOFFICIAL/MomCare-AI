@@ -53,13 +53,11 @@ export interface AdditionalChatContext {
 const API_KEY: string | undefined = import.meta.env.VITE_PUBLIC_GROQ_API_KEY;
 // Use the correctly imported Base type to correctly type the model property
 // Ensure this model supports vision and doesn't have the system prompt restriction, or handle as done in ChatPage.
-const MODEL_NAME: ChatCompletionCreateParamsBase['model'] = "llama-3.2-90b-vision-preview"; // Example: Use a versatile model if vision has restrictions OR keep vision and rely on ChatPage filtering.
-// If using a vision-specific model like "llama-3.2-90b-vision-preview", the filtering in ChatPage is ESSENTIAL.
-// const MODEL_NAME: ChatCompletionCreateParamsBase['model'] = "llama-3.2-90b-vision-preview";
+const MODEL_NAME: ChatCompletionCreateParamsBase['model'] = "meta-llama/llama-4-maverick-17b-128e-instruct";
 
 
 if (!API_KEY) {
-    console.error("CRITICAL: VITE_PUBLIC_GROQ_API_KEY environment variable is not set. Groq service will be unavailable.");
+    // console.error("CRITICAL: VITE_PUBLIC_GROQ_API_KEY environment variable is not set. Groq service will be unavailable.");
 }
 
 // --- Initialization ---
@@ -83,7 +81,7 @@ const formatDateSafe = (dateString: string | undefined | null): string => {
         if (isNaN(date.getTime())) return 'invalid date';
         return format(date, 'MMM d, yyyy');
     } catch (error) {
-        console.warn(`Error formatting date "${dateString}":`, error);
+        // console.warn(`Error formatting date "${dateString}":`, error);
         return 'error formatting date';
     }
 };
@@ -244,7 +242,7 @@ export const fileToApiImagePart = async (file: File): Promise<ImageContentPart> 
             }
         };
     } catch (error: unknown) {
-        console.error("Error processing file for API:", error);
+        // console.error("Error processing file for API:", error);
         throw new Error(`Failed to process image file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 };
@@ -260,7 +258,7 @@ export const startChat = (
 ): ChatCompletionMessageParam[] => {
     if (!groq) {
         // This case should ideally be handled earlier (e.g., disable chat feature if API key missing)
-        console.error("Groq service not initialized in startChat.");
+        // console.error("Groq service not initialized in startChat.");
         // Return a minimal history or throw, depending on desired behavior
         // Throwing might be better to signal a configuration issue clearly.
         throw new Error('Groq service not initialized. Cannot start chat.');
@@ -288,7 +286,7 @@ export const startChat = (
         return [systemMessage, userMessage, assistantMessage];
 
     } catch (error: unknown) {
-        console.error('Error preparing initial Groq messages:', error);
+        // console.error('Error preparing initial Groq messages:', error);
         // Check for specific API key errors if possible, otherwise throw a generic error
         if (error instanceof Error && (error.message.includes('API key') || error.message.includes('authentication'))) {
             throw new Error('Failed to start chat: Invalid or missing Groq API Key.');
@@ -304,7 +302,7 @@ export const sendMessage = async (
 ): Promise<string> => {
     if (!groq) throw new Error("Groq service not available. Check API Key.");
     if (!messages?.length) {
-        console.warn("sendMessage called with empty history.");
+        // console.warn("sendMessage called with empty history.");
         return "[No message history provided]";
     }
 
@@ -315,11 +313,11 @@ export const sendMessage = async (
     const messagesToSend = historyContainsImage ? messages.filter(msg => msg.role !== 'system') : messages;
 
     if (messagesToSend.length === 0 && historyContainsImage) {
-         console.warn("sendMessage: History contained only system message and image(s). Cannot send empty history.");
+        //  console.warn("sendMessage: History contained only system message and image(s). Cannot send empty history.");
          return "[Cannot process system message with image in non-streaming mode]";
     }
 
-    console.log(`Sending ${messagesToSend.length} messages to Groq (non-streaming). Image in history: ${historyContainsImage}`);
+    // console.log(`Sending ${messagesToSend.length} messages to Groq (non-streaming). Image in history: ${historyContainsImage}`);
 
     try {
         // Use the CORRECTLY DEFINED local ChatCompletionCreateParams type
@@ -339,18 +337,18 @@ export const sendMessage = async (
         const responseContent = responseChoice?.message?.content;
         const finishReason = responseChoice?.finish_reason;
 
-        console.log(`Groq non-streaming response received. Finish Reason: ${finishReason}`);
+        // console.log(`Groq non-streaming response received. Finish Reason: ${finishReason}`);
 
         // Handle different finish reasons and null content
         if (responseContent === null) {
-            console.warn(`Groq response content is null. Finish reason: ${finishReason}`);
+            // console.warn(`Groq response content is null. Finish reason: ${finishReason}`);
             if (finishReason === 'tool_calls') return "[Assistant used a tool - response not displayed.]";
             if (finishReason === 'stop') return ""; // Stop usually means valid empty response
             // Other reasons (length, content_filter) with null content are problematic
             throw new Error(`AI completed with null content and unexpected reason: ${finishReason}.`);
         } else if (!responseContent && finishReason !== 'stop') {
              // Content is empty string or undefined, but reason wasn't 'stop'
-             console.warn(`Groq response content is empty/missing. Finish reason: ${finishReason}`);
+            //  console.warn(`Groq response content is empty/missing. Finish reason: ${finishReason}`);
              if (finishReason === 'length') return "[Response may be truncated due to length limit]";
              if (finishReason === 'content_filter' as string) return "[Response blocked by content filter]";
              throw new Error(`AI provided no valid response content. Finish Reason: ${finishReason}`);
@@ -360,7 +358,7 @@ export const sendMessage = async (
         return responseContent || ""; // Return empty string if content is validly empty
 
     } catch (error: unknown) {
-         console.error('Error sending non-streaming message to Groq:', error);
+        //  console.error('Error sending non-streaming message to Groq:', error);
          if (error instanceof Groq.APIError) {
              // Provide more specific error messages based on status
              if (error.status === 400) throw new Error(`Groq API Error (400): Bad Request. ${error.message}. Check input format/content.`);
@@ -391,7 +389,7 @@ export const sendMessageStream = async (
     // Note: Filtering based on image+system incompatibility is now handled *before* calling this function (in ChatPage.tsx)
     // This function receives the already prepared `historyForThisApiCall`.
 
-    console.log(`Sending ${messages.length} messages to Groq (streaming).`);
+    // console.log(`Sending ${messages.length} messages to Groq (streaming).`);
     // console.log("Messages being sent:", JSON.stringify(messages, null, 2)); // Verbose logging if needed
 
     let accumulatedText = "";
@@ -425,7 +423,7 @@ export const sendMessageStream = async (
              // Check for finish reason in the chunk (often in the last chunk for a choice)
              const chunkFinishReason = chunk.choices[0]?.finish_reason;
              if (chunkFinishReason) {
-                  console.log(`Groq stream chunk finished choice with reason: ${chunkFinishReason}`);
+                //   console.log(`Groq stream chunk finished choice with reason: ${chunkFinishReason}`);
                   streamClosedNormally = (chunkFinishReason === 'stop'); // 'stop' is the normal successful completion
 
                   // Handle potentially problematic finish reasons
@@ -441,7 +439,7 @@ export const sendMessageStream = async (
                       }
                       // Send warning as a chunk to UI if desired
                       // onChunk(warningMessage);
-                       console.warn(`Stream ended with reason: ${chunkFinishReason}`);
+                    //    console.warn(`Stream ended with reason: ${chunkFinishReason}`);
                   }
              }
         } // End of for await loop
@@ -452,7 +450,7 @@ export const sendMessageStream = async (
              // Handle cases where the stream finished without errors but might be empty
               if (accumulatedText.trim().length === 0 && streamClosedNormally) {
                    // Stream finished normally ('stop') but produced no text
-                   console.warn("Groq stream completed normally but produced no text content.");
+                //    console.warn("Groq stream completed normally but produced no text content.");
                    // Check if the last message sent *by the user* contained an image
                    const lastUserMessageContent = messages[messages.length - 1]?.content;
                    const hadImageInput = Array.isArray(lastUserMessageContent) && lastUserMessageContent.some(p => p.type === 'image_url');
@@ -460,15 +458,15 @@ export const sendMessageStream = async (
                    // onChunk(hadImageInput ? "[Image received. No further text generated.]" : "[AI response was empty]");
                } else if (!streamClosedNormally && accumulatedText.trim().length === 0){
                    // Stream ended for other reasons (e.g., length) without text
-                   console.warn("Groq stream ended abnormally without producing text.");
+                //    console.warn("Groq stream ended abnormally without producing text.");
                }
-               console.log("Groq stream processing finished successfully.");
+            //    console.log("Groq stream processing finished successfully.");
                onComplete(); // Signal normal completion
         }
         // If errorOccurred is true, onError was already called, so no need for else block here.
 
     } catch (error: unknown) {
-         console.error('Error processing Groq stream:', error);
+        //  console.error('Error processing Groq stream:', error);
          errorOccurred = true; // Ensure error state is set
          let userFriendlyError: Error;
 

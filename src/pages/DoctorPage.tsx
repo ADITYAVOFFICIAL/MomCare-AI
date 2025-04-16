@@ -29,7 +29,7 @@ const DoctorPage: React.FC = () => {
             return;
         }
         if (!isAuthenticated) {
-            console.warn("DoctorPage: User not authenticated.");
+            // console.warn("DoctorPage: User not authenticated.");
             setIsAuthorized(false);
             navigate('/login');
             return;

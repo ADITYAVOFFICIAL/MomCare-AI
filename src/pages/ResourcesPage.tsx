@@ -54,7 +54,7 @@ const ResourcesPage: React.FC = () => {
     const fetchPosts = useCallback(async (search: string = '', category: string = 'All') => {
         setIsLoading(true);
         setError(null); // Clear previous errors
-        console.log(`Fetching posts with search: "${search}", category: "${category}"`);
+        // console.log(`Fetching posts with search: "${search}", category: "${category}"`);
 
         try {
             // Treat 'All' category as no filter (empty string)
@@ -63,7 +63,7 @@ const ResourcesPage: React.FC = () => {
 
             // Ensure the response is correctly typed as BlogPost[]
             const typedPosts: BlogPost[] = postsResponse;
-            console.log(`Fetched ${typedPosts.length} posts.`);
+            // console.log(`Fetched ${typedPosts.length} posts.`);
 
             if (typedPosts.length > 0) {
                 // Find the first post that has a slug to be featured
@@ -75,7 +75,7 @@ const ResourcesPage: React.FC = () => {
                     setBlogPosts(typedPosts.filter(p => p.$id !== firstValidFeatured.$id));
                 } else {
                     // If no post has a slug (unlikely, but possible), feature none and list all
-                    console.warn("No posts with slugs found to feature.");
+                    // console.warn("No posts with slugs found to feature.");
                     setFeaturedPost(null);
                     setBlogPosts(typedPosts);
                 }
@@ -85,7 +85,7 @@ const ResourcesPage: React.FC = () => {
                 setBlogPosts([]);
             }
         } catch (err: unknown) {
-            console.error('Error fetching blog posts:', err);
+            // console.error('Error fetching blog posts:', err);
             const errorMessage = err instanceof Error ? err.message : "Could not load blog posts. Please try again later.";
             setError(errorMessage); // Set error state
             toast({
@@ -126,7 +126,7 @@ const ResourcesPage: React.FC = () => {
     /** Navigates to the single blog post page using its slug. */
     const handleViewPost = (postSlug: string | undefined): void => {
         if (!postSlug) {
-            console.error("Cannot navigate: Post slug is missing.");
+            // console.error("Cannot navigate: Post slug is missing.");
             toast({
                 title: "Navigation Error",
                 description: "Could not find the identifier (slug) for this post.",
@@ -134,7 +134,7 @@ const ResourcesPage: React.FC = () => {
             });
             return;
         }
-        console.log(`Navigating to post with slug: ${postSlug}`);
+        // console.log(`Navigating to post with slug: ${postSlug}`);
         navigate(`/blog/${postSlug}`); // Use navigate function
     };
 

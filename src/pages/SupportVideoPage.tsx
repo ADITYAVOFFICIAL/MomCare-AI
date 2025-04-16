@@ -79,7 +79,7 @@ const SupportVideoPage: React.FC = () => {
       videoRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       // Attempt to play, catching potential browser restrictions
       videoRef.current.play().catch((error) => {
-        console.warn('Video autoplay prevented:', error);
+        // console.warn('Video autoplay prevented:', error);
         // Optionally inform the user they might need to press play manually
       });
     }

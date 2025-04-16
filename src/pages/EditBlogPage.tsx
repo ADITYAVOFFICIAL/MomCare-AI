@@ -110,14 +110,14 @@ const EditBlogPage: React.FC = () => {
                 return;
             }
 
-            console.log(`Fetching post data for slug: ${routeSlug} to edit...`);
+            // console.log(`Fetching post data for slug: ${routeSlug} to edit...`);
             setIsFetching(true);
             setFetchError(null); // Clear previous errors
 
             try {
                 const post = await getBlogPostBySlug(routeSlug);
                 if (post) {
-                    console.log("Fetched post data:", post);
+                    // console.log("Fetched post data:", post);
                     setOriginalPost(post); // Store the original post data (needed for ID on update)
                     // Populate form fields with fetched data
                     setTitle(post.title);
@@ -134,7 +134,7 @@ const EditBlogPage: React.FC = () => {
                     navigate('/resources'); // Redirect back if the post doesn't exist
                 }
             } catch (error: unknown) {
-                console.error("Error fetching blog post for edit:", error);
+                // console.error("Error fetching blog post for edit:", error);
                 const message = error instanceof Error ? error.message : "Failed to load blog post data.";
                 setFetchError(message);
                 toast({ title: "Loading Error", description: message, variant: "destructive" });
@@ -198,7 +198,7 @@ const EditBlogPage: React.FC = () => {
         }
         setIsFormatting(true);
         try {
-            console.log("Attempting Groq AI formatting for existing content...");
+            // console.log("Attempting Groq AI formatting for existing content...");
             // *** MODIFIED: Use the Groq formatting function ***
             const formattedContent = await formatContentWithGroq(contentMd);
             setContentMd(formattedContent);
@@ -210,7 +210,7 @@ const EditBlogPage: React.FC = () => {
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Could not format content via AI.";
             toast({ title: "Formatting Error", description: message, variant: "destructive" });
-            console.error("Groq AI formatting error:", error); // Updated error message
+            // console.error("Groq AI formatting error:", error); // Updated error message
         } finally {
             setIsFormatting(false);
         }
@@ -263,19 +263,19 @@ const EditBlogPage: React.FC = () => {
                 // tags: updatedTagsArray,
             };
 
-            console.log(`Updating post ${originalPost.$id} with data:`, updateData);
+            // console.log(`Updating post ${originalPost.$id} with data:`, updateData);
 
             // Call the Appwrite update function
             const updatedPost = await updateBlogPost(originalPost.$id, updateData);
 
             toast({ title: "Blog Post Updated", description: `"${updatedPost.title}" saved successfully.` });
-            console.log("Post updated successfully:", updatedPost);
+            // console.log("Post updated successfully:", updatedPost);
 
             // Navigate to the updated post's page (using the potentially changed slug)
             navigate(`/blog/${updatedPost.slug}`);
 
         } catch (error: unknown) {
-            console.error(`Error updating blog post ${originalPost.$id}:`, error);
+            // console.error(`Error updating blog post ${originalPost.$id}:`, error);
             let description = "An unexpected error occurred while saving changes.";
             if (error instanceof Error) {
                  // Check for specific Appwrite slug conflict error message during update

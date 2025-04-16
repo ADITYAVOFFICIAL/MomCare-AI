@@ -114,7 +114,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
       const sessionList = await getChatSessionsList(userId, 200);
       setSessions(sessionList);
     } catch (err) {
-      console.error("Failed to fetch chat sessions:", err);
+      // console.error("Failed to fetch chat sessions:", err);
       setError("Could not load chat history.");
       setSessions([]);
     } finally {
@@ -163,7 +163,7 @@ const ChatHistorySidebar: React.FC<ChatHistorySidebarProps> = ({
          fetchSessions(); // Refetch to get consistent state
       }
     } catch (err) {
-      console.error("Error deleting chat session:", err);
+      // console.error("Error deleting chat session:", err);
       const errorMsg = err instanceof Error ? err.message : "Unknown deletion error.";
       setError(`Deletion failed: ${errorMsg}`);
       toast({ title: "Deletion Failed", description: errorMsg, variant: "destructive" });

@@ -303,9 +303,9 @@ const GamesPage: React.FC = () => {
       } else {
           setError(`Please switch MetaMask to ${MONAD_NETWORK_NAME}. You are currently on ${network.name}.`);
       }
-      console.log(`Network check: ${isCorrect ? 'Correct' : 'Incorrect'} network (${network.name}, ${currentChainId})`);
+      // console.log(`Network check: ${isCorrect ? 'Correct' : 'Incorrect'} network (${network.name}, ${currentChainId})`);
     } catch (err) {
-      console.error("Error checking network:", err);
+      // console.error("Error checking network:", err);
       setError("Could not detect network. Ensure MetaMask is connected and permissions are granted.");
       setIsOnCorrectNetwork(false); setNetworkName(null);
     }
@@ -315,7 +315,7 @@ const GamesPage: React.FC = () => {
   // --- Setup Contracts and Signer (Unchanged) ---
   const setupEthers = useCallback(async (currentProvider: BrowserProvider, currentAddress: string) => {
       try {
-          console.log("Setting up signer and contracts...");
+          // console.log("Setting up signer and contracts...");
           const currentSigner = await currentProvider.getSigner();
           setSigner(currentSigner);
           const gameContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, currentSigner);
@@ -323,10 +323,10 @@ const GamesPage: React.FC = () => {
           // Setup read-only contract using the provider directly
           const readContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, currentProvider);
           setReadOnlyContract(readContract);
-          console.log("Signer and contracts initialized.");
+          // console.log("Signer and contracts initialized.");
           return true;
       } catch (error) {
-           console.error("Error setting up signer/contracts:", error);
+          //  console.error("Error setting up signer/contracts:", error);
            setError("Failed to initialize contract connection. Please refresh.");
            setSigner(null); setContract(null); setReadOnlyContract(null);
            return false;
@@ -335,7 +335,7 @@ const GamesPage: React.FC = () => {
 
   // --- Reset Connection State Function (NEW) ---
   const resetConnectionState = useCallback(() => {
-      console.log("Resetting connection state...");
+      // console.log("Resetting connection state...");
       setIsConnected(false);
       setUserAddress(null);
       setProvider(null);
@@ -353,7 +353,7 @@ const GamesPage: React.FC = () => {
 
   // --- Disconnect Wallet Function (NEW) ---
   const disconnectWallet = useCallback(() => {
-      console.log("User requested disconnect from dApp.");
+      // console.log("User requested disconnect from dApp.");
       resetConnectionState();
       setUserExplicitlyDisconnected(true); // Set the flag
       toast({ title: "Wallet Disconnected", description: "Wallet connection state cleared in the app." });
@@ -365,7 +365,7 @@ const GamesPage: React.FC = () => {
     // Prevent connection if connecting/switching, or if user explicitly disconnected via button
     if (isConnecting || isSwitchingNetwork || userExplicitlyDisconnected) {
         if (userExplicitlyDisconnected) {
-            console.log("Connect attempt blocked: User explicitly disconnected.");
+            // console.log("Connect attempt blocked: User explicitly disconnected.");
         }
         return;
     }
@@ -383,10 +383,10 @@ const GamesPage: React.FC = () => {
       let accounts: string[];
       // Request accounts only if not triggered by listener finding an existing account
       if (triggeredByListener && window.ethereum.selectedAddress) {
-           console.log("Connecting via listener with existing address:", window.ethereum.selectedAddress);
+          //  console.log("Connecting via listener with existing address:", window.ethereum.selectedAddress);
            accounts = [window.ethereum.selectedAddress];
       } else {
-           console.log("Requesting accounts via eth_requestAccounts...");
+          //  console.log("Requesting accounts via eth_requestAccounts...");
            accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
       }
 
@@ -395,7 +395,7 @@ const GamesPage: React.FC = () => {
           throw new Error("No account selected/available in MetaMask.");
       }
       userAddr = accounts[0];
-      console.log("Account found/selected:", userAddr);
+      // console.log("Account found/selected:", userAddr);
 
       // Use 'any' network to allow connection regardless of the initial network
       browserProvider = new ethers.BrowserProvider(window.ethereum, 'any');
@@ -427,13 +427,13 @@ const GamesPage: React.FC = () => {
           // Optionally set up read-only contract here if needed on wrong network
           const readContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, browserProvider);
           setReadOnlyContract(readContract); // Allow fetching leaderboard even if network wrong
-          console.log("Wallet connected, but network incorrect. Write contracts not set.");
+          // console.log("Wallet connected, but network incorrect. Write contracts not set.");
           // Error is already set by checkNetwork
           toast({ title: "Wallet Connected", description: `Address: ${shortenAddress(userAddr)}, but on wrong network (${networkName || 'Unknown'}).`, variant: "default" }); // Changed "warning" to "default"
       }
 
     } catch (err: any) {
-      console.error("Error during connect/setup:", err);
+      // console.error("Error during connect/setup:", err);
       let message = "Failed to connect wallet.";
       if (err.code === 4001) message = "Connection request rejected by user.";
       else if (err.message?.includes("disconnected")) message = "MetaMask is disconnected or locked.";
@@ -456,7 +456,7 @@ const GamesPage: React.FC = () => {
     // Use readOnlyContract - it might exist even if not on correct network (if set up that way)
     // Require userAddress to fetch player-specific score
     if (!readOnlyContract) {
-        console.log("Skipping fetch: Read-only contract not available.");
+        // console.log("Skipping fetch: Read-only contract not available.");
         // Optionally clear data if contract disappears
         // setLeaderboard([]);
         // setHighScore('0');
@@ -465,7 +465,7 @@ const GamesPage: React.FC = () => {
     // Only fetch player score if address is known
     const shouldFetchPlayerScore = !!userAddress;
 
-    console.log("Attempting to fetch contract data...", { hasContract: !!readOnlyContract, hasUser: shouldFetchPlayerScore });
+    // console.log("Attempting to fetch contract data...", { hasContract: !!readOnlyContract, hasUser: shouldFetchPlayerScore });
     setIsLoadingData(true);
     // Keep network error if it exists, otherwise clear general errors before fetch
     setError(prev => prev?.includes("network") || prev?.includes("Switch") ? prev : null);
@@ -489,7 +489,7 @@ const GamesPage: React.FC = () => {
       if (boardResult.status === 'fulfilled' && Array.isArray(boardResult.value)) {
           setLeaderboard(boardResult.value.map((entry: any) => ({ player: entry.player, score: entry.score })));
       } else {
-          console.warn("Failed to fetch leaderboard:", boardResult.status === 'rejected' ? boardResult.reason : 'Invalid format');
+          // console.warn("Failed to fetch leaderboard:", boardResult.status === 'rejected' ? boardResult.reason : 'Invalid format');
           setLeaderboard([]); // Clear leaderboard on error
           // Don't set a generic error here, let specific errors show if needed
       }
@@ -498,7 +498,7 @@ const GamesPage: React.FC = () => {
           if (scoreResult.status === 'fulfilled') {
               setHighScore(scoreResult.value.toString());
           } else {
-              console.warn("Failed to fetch player high score:", scoreResult.reason);
+              // console.warn("Failed to fetch player high score:", scoreResult.reason);
               setHighScore('0'); // Reset high score on error
           }
       } else {
@@ -509,14 +509,14 @@ const GamesPage: React.FC = () => {
       if (sizeResult.status === 'fulfilled') {
           setMaxLeaderboardSize(Number(sizeResult.value));
       } else {
-          console.warn("Failed to fetch max leaderboard size:", sizeResult.reason);
+          // console.warn("Failed to fetch max leaderboard size:", sizeResult.reason);
           // Keep default or previous value
       }
 
-      console.log("Data fetch attempt complete.");
+      // console.log("Data fetch attempt complete.");
     } catch (err) {
       // This catch block might not be reached if Promise.allSettled handles individual errors
-      console.error("Unexpected error during bulk data fetching:", err);
+      // console.error("Unexpected error during bulk data fetching:", err);
       setError("Could not fetch all game data. Some information might be missing.");
       // Decide if you want to clear all data on a full failure
       // setLeaderboard([]);
@@ -547,7 +547,7 @@ const GamesPage: React.FC = () => {
     const scoreToast = toast({ title: "Submitting Score...", description: `Sending score: ${lastReportedGameScore}` });
 
     try {
-      console.log(`Attempting to submit score: ${lastReportedGameScore} from ${userAddress}`);
+      // console.log(`Attempting to submit score: ${lastReportedGameScore} from ${userAddress}`);
       // Estimate gas explicitly first (optional but good for debugging)
       // try {
       //   const estimatedGas = await contract.estimateGas.submitScore(lastReportedGameScore);
@@ -578,7 +578,7 @@ const GamesPage: React.FC = () => {
            if (err.reason.includes("Panic") && err.reason.includes("OVERFLOW(17)")) {
                title = "Contract Error";
                message = "Transaction failed due to an arithmetic overflow/underflow in the smart contract (Panic 0x11). Please report this to the developers.";
-               console.error("CONTRACT BUG DETECTED: Arithmetic Overflow/Underflow (Panic 0x11) on submitScore.");
+              //  console.error("CONTRACT BUG DETECTED: Arithmetic Overflow/Underflow (Panic 0x11) on submitScore.");
            }
        } else if (err.code === -32603 && err.data?.message) {
             // Handle internal JSON-RPC errors if they contain a message
@@ -586,7 +586,7 @@ const GamesPage: React.FC = () => {
              if (err.data.message.includes("Panic") && err.data.message.includes("overflow")) { // Check internal message too
                title = "Contract Error";
                message = "Transaction failed due to an arithmetic overflow/underflow in the smart contract. Please report this.";
-               console.error("CONTRACT BUG DETECTED: Arithmetic Overflow/Underflow (Panic 0x11) on submitScore.");
+              //  console.error("CONTRACT BUG DETECTED: Arithmetic Overflow/Underflow (Panic 0x11) on submitScore.");
            }
        } else if (err.message?.includes("insufficient funds")) {
            message = "Insufficient funds for gas fees.";
@@ -595,7 +595,7 @@ const GamesPage: React.FC = () => {
            message = err.message;
        }
 
-       console.error("Submit score error:", err); // Log the full error object
+      //  console.error("Submit score error:", err); // Log the full error object
        setError(message);
        scoreToast.update({ id: scoreToast.id, title: title, description: message, variant: "destructive" });
     } finally { setIsSubmitting(false); }
@@ -604,7 +604,7 @@ const GamesPage: React.FC = () => {
 
   // --- Callback to receive score from game component (Unchanged) ---
   const handleGameScoreReport = useCallback((score: number) => {
-    console.log(`Game reported final score: ${score}`);
+    // console.log(`Game reported final score: ${score}`);
     setLastReportedGameScore(score);
 
     const currentHighScoreNum = parseInt(highScore || '0', 10);
@@ -612,7 +612,7 @@ const GamesPage: React.FC = () => {
     if (score > 0) {
         toast({ title: "Game Over!", description: `Score: ${score}. Ready to submit.`});
         if (score > currentHighScoreNum) {
-            console.log(`New High Score! ${score} > ${currentHighScoreNum}`);
+            // console.log(`New High Score! ${score} > ${currentHighScoreNum}`);
             toast({
                 title: "🎉 New High Score! 🎉",
                 description: `Your new high score is ${score}!`,
@@ -629,10 +629,10 @@ const GamesPage: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       if (!userExplicitlyDisconnected && window.ethereum?.selectedAddress && window.ethereum.isConnected()) {
-        console.log("Attempting auto-connect on load...");
+        // console.log("Attempting auto-connect on load...");
         await connectWallet(true); // Trigger connection using existing address
       } else {
-        console.log("Skipping auto-connect: No pre-selected address, wallet disconnected, or user explicitly disconnected.");
+        // console.log("Skipping auto-connect: No pre-selected address, wallet disconnected, or user explicitly disconnected.");
       }
     };
     init();
@@ -664,17 +664,17 @@ const GamesPage: React.FC = () => {
     if (typeof window.ethereum === 'undefined') return;
 
     const handleAccountsChanged = (accounts: string[]) => {
-      console.log("MetaMask accounts changed:", accounts);
+      // console.log("MetaMask accounts changed:", accounts);
       if (accounts.length === 0) {
            // Wallet locked or disconnected in MetaMask itself
-           console.log("Wallet disconnected or locked via MetaMask.");
+          //  console.log("Wallet disconnected or locked via MetaMask.");
            setError("Wallet disconnected or locked.");
            toast({ title: "Wallet Disconnected", description: "Please unlock or reconnect MetaMask.", variant: "default" }); // Changed "warning" to "default"
            resetConnectionState(); // Reset dApp state
            setUserExplicitlyDisconnected(false); // Allow reconnection attempt if they unlock/reconnect in MM
       } else if (accounts[0] !== userAddress) {
            // Switched to a different account
-           console.log("Account switched in MetaMask, re-initializing...");
+          //  console.log("Account switched in MetaMask, re-initializing...");
            // Reset explicit disconnect flag if they switch accounts
            setUserExplicitlyDisconnected(false);
            // Re-run connection logic for the new account
@@ -683,7 +683,7 @@ const GamesPage: React.FC = () => {
     };
 
     const handleChainChanged = (chainId: string) => {
-      console.log("MetaMask network changed:", chainId);
+      // console.log("MetaMask network changed:", chainId);
       // Reset explicit disconnect flag if they change networks
       setUserExplicitlyDisconnected(false);
       // Re-run connection logic to check the new network and update state
@@ -730,7 +730,7 @@ const GamesPage: React.FC = () => {
     let hideTimer: NodeJS.Timeout | null = null;
 
     if (playHighScoreVideo && videoElement && overlayElement) {
-      console.log("Starting high score video effect...");
+      // console.log("Starting high score video effect...");
       videoElement.currentTime = 0;
       const playPromise = videoElement.play();
 
@@ -738,9 +738,9 @@ const GamesPage: React.FC = () => {
           playPromise.then(() => {
               overlayElement.style.visibility = 'visible';
               overlayElement.style.opacity = '1';
-              console.log("Video playing, showing overlay instantly.");
+              // console.log("Video playing, showing overlay instantly.");
               hideTimer = setTimeout(() => {
-                  console.log("Hiding overlay instantly and resetting state.");
+                  // console.log("Hiding overlay instantly and resetting state.");
                   overlayElement.style.visibility = 'hidden';
                   overlayElement.style.opacity = '0';
                   videoElement.pause();
@@ -748,13 +748,13 @@ const GamesPage: React.FC = () => {
               }, VIDEO_VISIBLE_DURATION_MS);
 
           }).catch(error => {
-              console.error("Error playing video:", error);
+              // console.error("Error playing video:", error);
               overlayElement.style.visibility = 'hidden';
               overlayElement.style.opacity = '0';
               setPlayHighScoreVideo(false);
           });
       } else {
-          console.warn("Video play() did not return a promise.");
+          // console.warn("Video play() did not return a promise.");
           overlayElement.style.visibility = 'visible';
           overlayElement.style.opacity = '1';
           hideTimer = setTimeout(() => {

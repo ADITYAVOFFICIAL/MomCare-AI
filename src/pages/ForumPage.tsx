@@ -51,7 +51,7 @@ const getInitials = (nameStr: string | undefined | null): string => {
 const formatRelativeTime = (dateString?: string): string => {
     if (!dateString) return 'unknown time';
     try { return formatDistanceToNow(parseISO(dateString), { addSuffix: true }); }
-    catch (e) { console.error("Error parsing date for relative time:", dateString, e); return 'invalid date'; }
+    catch (e) { /*console.error("Error parsing date for relative time:", dateString, e);*/return 'invalid date'; }
 };
 
 // --- Constants ---
@@ -136,7 +136,7 @@ const TopicListItem: React.FC<{
                     isAuthenticated && currentUserId ? getUserVoteStatus(currentUserId, topic.$id) : Promise.resolve('none' as UserVoteStatus)
                 ]);
                 if (isMounted) { setVoteCounts(counts); setVoteStatus(status); }
-            } catch (err) { if (isMounted) { setVoteCounts(prev => ({ ...prev, score: topic.voteScore || 0 })); setVoteStatus('none'); } console.error(`Error fetching vote data for topic ${topic.$id}:`, err); }
+            } catch (err) { if (isMounted) { setVoteCounts(prev => ({ ...prev, score: topic.voteScore || 0 })); setVoteStatus('none'); } /*console.error(`Error fetching vote data for topic ${topic.$id}:`, err);*/ }
             finally { if (isMounted) setIsLoadingVotes(false); }
         };
         fetchVoteData();
@@ -157,7 +157,7 @@ const TopicListItem: React.FC<{
             await onVote(topic.$id, voteType);
             const [refetchedStatus, refetchedCounts] = await Promise.all([ getUserVoteStatus(currentUserId!, topic.$id), getTargetVoteCounts(topic.$id) ]);
             setVoteStatus(refetchedStatus); setVoteCounts(refetchedCounts);
-        } catch (error) { setVoteStatus(previousStatus); setVoteCounts(previousCounts); console.error("Topic vote failed, reverting UI"); }
+        } catch (error) { setVoteStatus(previousStatus); setVoteCounts(previousCounts); /*console.error("Topic vote failed, reverting UI");*/ }
         finally { setIsVoting(false); }
     };
 
@@ -218,7 +218,7 @@ const PostItem: React.FC<{
                     isAuthenticated && currentUserId ? getUserVoteStatus(currentUserId, post.$id) : Promise.resolve('none' as UserVoteStatus)
                 ]);
                 if (isMounted) { setVoteCounts(counts); setVoteStatus(status); }
-            } catch (err) { if (isMounted) { setVoteCounts(prev => ({ ...prev, score: post.voteScore || 0 })); setVoteStatus('none'); } console.error(`Error fetching vote data for post ${post.$id}:`, err); }
+            } catch (err) { if (isMounted) { setVoteCounts(prev => ({ ...prev, score: post.voteScore || 0 })); setVoteStatus('none'); } /*console.error(`Error fetching vote data for post ${post.$id}:`, err);*/ }
             finally { if (isMounted) setIsLoadingVotes(false); }
         };
         fetchVoteData();
@@ -239,7 +239,7 @@ const PostItem: React.FC<{
             await onVote(post.$id, voteType);
             const [refetchedStatus, refetchedCounts] = await Promise.all([ getUserVoteStatus(currentUserId!, post.$id), getTargetVoteCounts(post.$id) ]);
             setVoteStatus(refetchedStatus); setVoteCounts(refetchedCounts);
-        } catch (error) { setVoteStatus(previousStatus); setVoteCounts(previousCounts); console.error("Post vote failed, reverting UI"); }
+        } catch (error) { setVoteStatus(previousStatus); setVoteCounts(previousCounts); /*console.error("Post vote failed, reverting UI");*/ }
         finally { setIsVoting(false); }
     };
 
@@ -338,7 +338,7 @@ const ForumPage: React.FC = () => {
             const response = await getForumTopics(currentCategory, TOPICS_PER_PAGE, offset, sortBy, searchQuery);
             setTopics(prev => (reset || page === 1) ? response.documents : [...prev, ...response.documents]);
             setTopicsTotal(response.total); setTopicsPage(page);
-        } catch (error: any) { setTopicsError("Failed to load topics."); toast({ title: "Error", description: "Could not fetch forum topics.", variant: "destructive" }); console.error("Fetch topics error:", error); }
+        } catch (error: any) { setTopicsError("Failed to load topics."); toast({ title: "Error", description: "Could not fetch forum topics.", variant: "destructive" }); /*console.error("Fetch topics error:", error);*/ }
         finally { setTopicsLoading(false); }
     }, [searchQuery, filterCategory, sortBy, toast]);
 
@@ -348,7 +348,7 @@ const ForumPage: React.FC = () => {
             const topicData = await getForumTopic(id);
             if (!topicData) throw new Error("Topic not found.");
             setCurrentTopic(topicData);
-        } catch (error: any) { setTopicError(error.message || "Failed to load topic details."); setCurrentTopic(null); toast({ title: "Error", description: "Could not fetch topic details.", variant: "destructive" }); if (error.message === "Topic not found.") { navigate('/forum', { replace: true }); } console.error("Fetch topic details error:", error); }
+        } catch (error: any) { setTopicError(error.message || "Failed to load topic details."); setCurrentTopic(null); toast({ title: "Error", description: "Could not fetch topic details.", variant: "destructive" }); if (error.message === "Topic not found.") { navigate('/forum', { replace: true }); } /*console.error("Fetch topic details error:", error);*/ }
         finally { setTopicLoading(false); }
     }, [toast, navigate]);
 
@@ -363,7 +363,7 @@ const ForumPage: React.FC = () => {
             );
             setPosts(prev => (reset || page === 1) ? sortedPosts : [...prev, ...sortedPosts]);
             setPostsTotal(response.total); setPostsPage(page);
-        } catch (error: any) { setPostsError("Failed to load replies."); toast({ title: "Error", description: "Could not fetch replies.", variant: "destructive" }); console.error("Fetch posts error:", error); }
+        } catch (error: any) { setPostsError("Failed to load replies."); toast({ title: "Error", description: "Could not fetch replies.", variant: "destructive" });/*console.error("Fetch posts error:", error);*/ }
         finally { setPostsLoading(false); }
     }, [postSearchQuery, toast]);
 
@@ -396,7 +396,7 @@ const ForumPage: React.FC = () => {
         // Only connect if on a topic page and authenticated
         if (!topicId || !isAuthenticated) {
             if (wsRef.current) {
-                console.log('[WS Frontend] Disconnecting WebSocket due to navigation or auth change.');
+                // console.log('[WS Frontend] Disconnecting WebSocket due to navigation or auth change.');
                 wsRef.current.close();
                 wsRef.current = null;
             }
@@ -404,29 +404,29 @@ const ForumPage: React.FC = () => {
         }
 
         if (wsRef.current) {
-            console.log('[WS Frontend] WebSocket connection already exists.');
+            // console.log('[WS Frontend] WebSocket connection already exists.');
             return;
         }
 
-        console.log(`[WS Frontend] Attempting to connect to backend WebSocket at ${BACKEND_WS_URL}...`);
+        // console.log(`[WS Frontend] Attempting to connect to backend WebSocket at ${BACKEND_WS_URL}...`);
         const ws = new WebSocket(BACKEND_WS_URL);
         wsRef.current = ws;
 
         ws.onopen = () => {
-            console.log('[WS Frontend] Connected to backend WebSocket.');
+            // console.log('[WS Frontend] Connected to backend WebSocket.');
             toast({ title: "Real-time connection established." });
         };
 
         ws.onmessage = (event) => {
             try {
                 const message: BackendWebSocketMessage = JSON.parse(event.data as string);
-                console.log('[WS Frontend] Received message:', message.type, message.payload);
+                // console.log('[WS Frontend] Received message:', message.type, message.payload);
 
                 switch (message.type) {
                     case 'new_post':
                         const newPostData = message.payload as ForumPost;
                         if (newPostData.topicId === topicId) {
-                            console.log(`[WS Frontend] Handling new_post for current topic ${topicId}`);
+                            // console.log(`[WS Frontend] Handling new_post for current topic ${topicId}`);
                             setPosts(prevPosts => {
                                 if (prevPosts.some(p => p.$id === newPostData.$id)) return prevPosts;
                                 const updatedPosts = [...prevPosts, newPostData];
@@ -442,7 +442,7 @@ const ForumPage: React.FC = () => {
                     case 'vote_update':
                         const voteUpdateData = message.payload as BackendVoteUpdatePayload;
                         const { targetId, targetType, voteCounts } = voteUpdateData;
-                        console.log(`[WS Frontend] Handling vote_update for ${targetType} ${targetId}`);
+                        // console.log(`[WS Frontend] Handling vote_update for ${targetType} ${targetId}`);
 
                         if (targetType === 'topic') {
                             // Update current topic score if it matches
@@ -459,30 +459,30 @@ const ForumPage: React.FC = () => {
                         break;
 
                     case 'info':
-                        console.log('[WS Frontend] Info from backend:', message.payload);
+                        // console.log('[WS Frontend] Info from backend:', message.payload);
                         break;
 
                     case 'error':
-                        console.error('[WS Frontend] Error message from backend:', message.payload);
+                        // console.error('[WS Frontend] Error message from backend:', message.payload);
                         toast({ title: "Backend Error", description: message.payload?.message || 'Unknown error', variant: "destructive" });
                         break;
 
                     default:
-                        console.warn('[WS Frontend] Received unknown message type:', message.type);
+                        // console.warn('[WS Frontend] Received unknown message type:', message.type);
                 }
             } catch (error) {
-                console.error('[WS Frontend] Error processing message:', error, 'Raw data:', event.data);
+                // console.error('[WS Frontend] Error processing message:', error, 'Raw data:', event.data);
             }
         };
 
         ws.onerror = (error) => {
-            console.error('[WS Frontend] WebSocket Error:', error);
+            // console.error('[WS Frontend] WebSocket Error:', error);
             toast({ title: "Real-time Connection Error", description: "Lost connection to the update service. Updates paused.", variant: "destructive" });
             wsRef.current = null;
         };
 
         ws.onclose = (event) => {
-            console.log(`[WS Frontend] WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
+            // console.log(`[WS Frontend] WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
             if (wsRef.current === ws) {
                 wsRef.current = null;
             }
@@ -495,7 +495,7 @@ const ForumPage: React.FC = () => {
         // Cleanup Function
         return () => {
             if (wsRef.current) {
-                console.log('[WS Frontend Cleanup] Closing WebSocket connection.');
+                // console.log('[WS Frontend Cleanup] Closing WebSocket connection.');
                 wsRef.current.close(1000, 'Component unmounting');
                 wsRef.current = null;
             }
@@ -534,12 +534,12 @@ const ForumPage: React.FC = () => {
             setIsModerating(false);
             if (finalDecision === ModerationDecision.DENY) { toast({ title: "Topic Rejected", description: rejectionReason, variant: "destructive" }); setIsCreatingTopic(false); return; }
             if (finalDecision === ModerationDecision.ERROR) { toast({ title: "Moderation Error", description: rejectionReason + " Please try again.", variant: "destructive" }); setIsCreatingTopic(false); return; }
-            const needsReview = finalDecision === ModerationDecision.FLAG; if (needsReview) { toast({ title: "Topic Under Review", description: rejectionReason || "Submitted but requires moderator review.", variant: "default" }); console.warn("Topic content flagged:", rejectionReason, combinedFlags); }
-            let profile: UserProfile | null = null; try { profile = await getUserProfile(user.$id); } catch (err) { console.warn("Profile fetch error", err); }
+            const needsReview = finalDecision === ModerationDecision.FLAG; if (needsReview) { toast({ title: "Topic Under Review", description: rejectionReason || "Submitted but requires moderator review.", variant: "default" }); /*console.warn("Topic content flagged:", rejectionReason, combinedFlags);*/ }
+            let profile: UserProfile | null = null; try { profile = await getUserProfile(user.$id); } catch (err) { /*console.warn("Profile fetch error", err);*/ }
             const creatorName = profile?.name || user.name || 'Anonymous'; const creatorAvatar = profile?.profilePhotoUrl;
             const createdTopic = await createForumTopic(user.$id, creatorName, creatorAvatar, { title: newTopicTitle, content: newTopicContent, category: newTopicCategory || undefined, /* needsReview: needsReview */ });
             toast({ title: "Topic Created Successfully!" }); setShowCreateTopicForm(false); setNewTopicTitle(''); setNewTopicContent(''); setNewTopicCategory(''); navigate(`/forum/${createdTopic.$id}`);
-        } catch (error: any) { console.error("Error creating topic:", error); toast({ title: "Creation Failed", description: error.message || "Could not create topic.", variant: "destructive" }); }
+        } catch (error: any) { /*console.error("Error creating topic:", error);*/ toast({ title: "Creation Failed", description: error.message || "Could not create topic.", variant: "destructive" }); }
         finally { setIsModerating(false); setIsCreatingTopic(false); }
     };
 
@@ -553,8 +553,8 @@ const ForumPage: React.FC = () => {
             const finalDecision = contentModeration.decision; const rejectionReason = contentModeration.reason; setIsModerating(false);
             if (finalDecision === ModerationDecision.DENY) { toast({ title: "Reply Rejected", description: rejectionReason || "Your reply violates community guidelines.", variant: "destructive" }); setIsReplying(false); return; }
             if (finalDecision === ModerationDecision.ERROR) { toast({ title: "Moderation Error", description: (rejectionReason || "Moderation check failed.") + " Please try again.", variant: "destructive" }); setIsReplying(false); return; }
-            const needsReview = finalDecision === ModerationDecision.FLAG; if (needsReview) { toast({ title: "Reply Under Review", description: rejectionReason || "Submitted but requires moderator review.", variant: "default" }); console.warn("Reply content flagged:", rejectionReason, contentModeration.flags); }
-            let profile: UserProfile | null = null; try { profile = await getUserProfile(user.$id); } catch (err) { console.warn("Profile fetch error", err); }
+            const needsReview = finalDecision === ModerationDecision.FLAG; if (needsReview) { toast({ title: "Reply Under Review", description: rejectionReason || "Submitted but requires moderator review.", variant: "default" }); /*console.warn("Reply content flagged:", rejectionReason, contentModeration.flags);*/ }
+            let profile: UserProfile | null = null; try { profile = await getUserProfile(user.$id); } catch (err) { /*console.warn("Profile fetch error", err);*/ }
             const replierName = profile?.name || user.name || 'Anonymous'; const replierAvatar = profile?.profilePhotoUrl;
             // Create post - the backend will receive this via Appwrite function and broadcast via WebSocket
             await createForumPost(user.$id, replierName, replierAvatar, { topicId: topicId, content: replyContent, /* needsReview: needsReview */ });
@@ -562,7 +562,7 @@ const ForumPage: React.FC = () => {
             // Update topic details (like reply count) - might still be needed if not included in WS message
             await fetchTopicDetails(topicId);
             // No need to manually fetchPosts here, WebSocket should handle it
-        } catch (error: any) { console.error("Error posting reply:", error); toast({ title: "Reply Failed", description: error.message || "Could not post reply.", variant: "destructive" }); }
+        } catch (error: any) { /*console.error("Error posting reply:", error);*/ toast({ title: "Reply Failed", description: error.message || "Could not post reply.", variant: "destructive" }); }
         finally { setIsModerating(false); setIsReplying(false); }
     };
 
@@ -573,7 +573,7 @@ const ForumPage: React.FC = () => {
             await castForumVote(user.$id, targetId, targetType, voteType);
             // Optimistic update handled in child components, WebSocket handles final state
         }
-        catch (error: any) { console.error(`Error casting vote:`, error); toast({ title: "Vote Error", description: error.message || "Could not cast vote.", variant: "destructive" }); throw error; }
+        catch (error: any) { /*console.error(`Error casting vote:`, error);*/ toast({ title: "Vote Error", description: error.message || "Could not cast vote.", variant: "destructive" }); throw error; }
     }, [user, isAuthenticated, toast]);
 
     const handleTopicVote = useCallback((topicId: string, voteType: 'up' | 'down' | 'remove') => handleVoteAction(topicId, 'topic', voteType), [handleVoteAction]);
@@ -598,7 +598,7 @@ const ForumPage: React.FC = () => {
             // Refresh topic details (counts)
             await fetchTopicDetails(topicId);
             // Optional: If backend sends a 'delete_post' message, handle it in onmessage
-        } catch (error: any) { if (error.message !== "Unauthorized") { toast({ title: "Deletion Failed", description: error.message || "Could not delete post.", variant: "destructive" }); } console.error("Delete post error:", error); }
+        } catch (error: any) { if (error.message !== "Unauthorized") { toast({ title: "Deletion Failed", description: error.message || "Could not delete post.", variant: "destructive" }); } /*console.error("Delete post error:", error);*/ }
         finally { setShowDeletePostDialog(false); setDeletingPostId(null); setIsDeletingPostConfirmed(false); }
     };
 
@@ -616,7 +616,7 @@ const ForumPage: React.FC = () => {
             toast({ title: "Topic Deletion Processed", description: `Topic deleted: ${result.topicDeleted}. Posts deleted: ${result.postsDeleted}, Failed: ${result.postsFailed}.`, variant: result.topicDeleted && result.postsFailed === 0 ? "default" : "destructive" });
             if (result.topicDeleted) { navigate('/forum', { replace: true }); }
             // Optional: If backend sends a 'delete_topic' message, handle it
-        } catch (error: any) { if (error.message !== "Unauthorized") { toast({ title: "Deletion Failed", description: error.message || "Could not delete topic.", variant: "destructive" }); } console.error("Delete topic error:", error); }
+        } catch (error: any) { if (error.message !== "Unauthorized") { toast({ title: "Deletion Failed", description: error.message || "Could not delete topic.", variant: "destructive" }); } /*console.error("Delete topic error:", error); */}
         finally { setShowDeleteTopicDialog(false); setDeletingTopicId(null); setIsDeletingTopicConfirmed(false); }
     };
 

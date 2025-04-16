@@ -73,7 +73,7 @@ const Emergency = () => {
   useEffect(() => {
     isMounted.current = true; // Component did mount
     if (!googleMapsApiKey) {
-      console.error("CRITICAL: Google Maps API Key (VITE_PUBLIC_GOOGLE_MAPS_API_KEY) is missing!");
+      // console.error("CRITICAL: Google Maps API Key (VITE_PUBLIC_GOOGLE_MAPS_API_KEY) is missing!");
       setErrorMessage("Map service configuration error. API Key is missing.");
       setStatus(LoadingStatus.ConfigError);
       toast({ title: "Config Error", description: "Maps API Key missing.", variant: "destructive" });
@@ -91,14 +91,14 @@ const Emergency = () => {
   // --- Geolocation Handling ---
   const handleRequestLocation = useCallback(() => {
     if (!isMounted.current) return; // Don't run if unmounted
-    console.log("Requesting location...");
+    // console.log("Requesting location...");
     setStatus(LoadingStatus.Locating);
     setErrorMessage(null);
     setCurrentLocation(null);
     setHospitals([]); // Clear previous results
 
     if (!navigator.geolocation) {
-      console.warn("Geolocation is not supported by this browser.");
+      // console.warn("Geolocation is not supported by this browser.");
       setErrorMessage("Geolocation is not supported by your browser.");
       setStatus(LoadingStatus.LocationError);
       return;
@@ -108,20 +108,20 @@ const Emergency = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         if (!isMounted.current) return; // Check mount status again in async callback
-        console.log("Location acquired:", position.coords);
+        // console.log("Location acquired:", position.coords);
         const newLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
         setCurrentLocation(newLocation);
         // Proceed to load maps script IF NOT ALREADY LOADED successfully
         if (!mapsApiLoaded.current) {
             handleLoadGoogleMaps();
         } else {
-            console.log("Maps API already loaded, proceeding to search.");
+            // console.log("Maps API already loaded, proceeding to search.");
             setStatus(LoadingStatus.SearchingHospitals); // If maps are ready, go straight to search
         }
       },
       (error) => {
         if (!isMounted.current) return; // Check mount status
-        console.error("Geolocation error:", error.code, error.message);
+        // console.error("Geolocation error:", error.code, error.message);
         let message = "Unable to retrieve your location.";
         switch (error.code) {
             case error.PERMISSION_DENIED:
@@ -150,7 +150,7 @@ const Emergency = () => {
     // Check if the modern Place class is already available (e.g., loaded by another component)
     // Also check for the specific method we need: searchByText
     if (window.google?.maps?.places?.Place?.searchByText) {
-      console.log("Google Maps script & Place.searchByText already available.");
+      // console.log("Google Maps script & Place.searchByText already available.");
       mapsApiLoaded.current = true; // Mark as loaded
       setStatus(LoadingStatus.SearchingHospitals); // Ready to search
       return;
@@ -158,12 +158,12 @@ const Emergency = () => {
 
     // Check if the script tag already exists
     if (document.getElementById(GOOGLE_MAPS_SCRIPT_ID)) {
-      console.log("Google Maps script tag exists, waiting for it to load/initialize...");
+      // console.log("Google Maps script tag exists, waiting for it to load/initialize...");
       setStatus(LoadingStatus.LoadingMaps);
       // Add a timeout fallback in case onload never fires or Place class fails to init
       const timeoutId = setTimeout(() => {
         if (isMounted.current && status === LoadingStatus.LoadingMaps && !window.google?.maps?.places?.Place?.searchByText) {
-          console.error("Timeout waiting for existing Google Maps script to initialize Place.searchByText. Check API Key/Console.");
+          // console.error("Timeout waiting for existing Google Maps script to initialize Place.searchByText. Check API Key/Console.");
           setErrorMessage("Map service took too long to initialize. Check API Key setup in Google Cloud Console (ensure 'Places API (New)' is enabled) or network, then refresh.");
           setStatus(LoadingStatus.MapsError); // Use MapsError for API/Script issues
         }
@@ -173,7 +173,7 @@ const Emergency = () => {
       return;
     }
 
-    console.log("Loading Google Maps script...");
+    // console.log("Loading Google Maps script...");
     setStatus(LoadingStatus.LoadingMaps);
     setErrorMessage(null); // Clear previous errors
 
@@ -192,14 +192,14 @@ const Emergency = () => {
         delete (window as any).googleMapsLoadTimeout;
       }
       if (!isMounted.current) return;
-      console.log("Google Maps script loaded via onload.");
+      // console.log("Google Maps script loaded via onload.");
       // CRITICAL CHECK: Verify Place class AND searchByText method exist AFTER onload
       if (window.google?.maps?.places?.Place?.searchByText) {
-        console.log("Place.searchByText confirmed available after onload.");
+        // console.log("Place.searchByText confirmed available after onload.");
         mapsApiLoaded.current = true; // Mark as loaded
         setStatus(LoadingStatus.SearchingHospitals); // Now ready to search
       } else {
-        console.error("Place.searchByText method missing after script load event. CRITICAL: Check API Key, ensure 'Places API (New)' is ENABLED in Google Cloud Console, check restrictions, and check console for Google Maps specific errors.");
+        // console.error("Place.searchByText method missing after script load event. CRITICAL: Check API Key, ensure 'Places API (New)' is ENABLED in Google Cloud Console, check restrictions, and check console for Google Maps specific errors.");
         setErrorMessage("Map service components failed to load. Ensure 'Places API (New)' is enabled in Google Cloud Console for your key, check restrictions, and then refresh.");
         setStatus(LoadingStatus.MapsError); // Use MapsError status
       }
@@ -208,7 +208,7 @@ const Emergency = () => {
     script.onerror = (error) => {
        if ((window as any).googleMapsLoadTimeout) clearTimeout((window as any).googleMapsLoadTimeout); // Clear timeout on error too
       if (!isMounted.current) return;
-      console.error("Failed to load Google Maps script:", error);
+      // console.error("Failed to load Google Maps script:", error);
       setErrorMessage("Failed to load map service script. Check network connection or API key validity/restrictions.");
       setStatus(LoadingStatus.MapsError);
     };
@@ -220,14 +220,14 @@ const Emergency = () => {
   // --- Google Places Search (Using searchByText with locationBias) ---
   const findNearbyHospitalsByText = useCallback(async () => {
      if (!isMounted.current || !currentLocation || status !== LoadingStatus.SearchingHospitals) {
-         console.log("Search skipped. Conditions not met:", { isMounted: isMounted.current, currentLocation: !!currentLocation, status });
+        //  console.log("Search skipped. Conditions not met:", { isMounted: isMounted.current, currentLocation: !!currentLocation, status });
          return;
      }
-    console.log(`Searching for nearby places using text query: "${HOSPITAL_SEARCH_KEYWORD}" biased near:`, currentLocation);
+    // console.log(`Searching for nearby places using text query: "${HOSPITAL_SEARCH_KEYWORD}" biased near:`, currentLocation);
 
     // Robust check for Place class AND the specific search method availability
     if (!window.google?.maps?.places?.Place?.searchByText) {
-      console.error("Place.searchByText method not available. Map service might be partially loaded or script failed. Check API Key/Console.");
+      // console.error("Place.searchByText method not available. Map service might be partially loaded or script failed. Check API Key/Console.");
       setErrorMessage("Map service components not ready. Ensure 'Places API (New)' is enabled in Google Cloud Console and refresh.");
       setStatus(LoadingStatus.MapsError);
       return;
@@ -271,14 +271,14 @@ const Emergency = () => {
     };
 
     try {
-        console.log("Sending searchByText request:", request);
+        // console.log("Sending searchByText request:", request);
         // Use Place.searchByText from the JS SDK
         // Ensure google.maps.places.Place is correctly typed if using @types/google.maps
         const { places } = await window.google.maps.places.Place.searchByText(request);
 
         if (!isMounted.current) return; // Check mount status after await
 
-        console.log("searchByText results received:", places);
+        // console.log("searchByText results received:", places);
 
         if (places && places.length > 0) {
             // Filter results more robustly: ensure it has an ID and relevant type
@@ -288,12 +288,12 @@ const Emergency = () => {
             );
 
             if (validResults.length > 0) {
-                console.log("Filtered valid results:", validResults);
+                // console.log("Filtered valid results:", validResults);
                 setHospitals(validResults);
                 setStatus(LoadingStatus.Success);
                 setErrorMessage(null); // Clear any previous error message on success
             } else {
-                 console.log("Initial results found, but none passed filtering criteria:", places);
+                //  console.log("Initial results found, but none passed filtering criteria:", places);
                  setErrorMessage("No relevant hospitals found nearby matching the specific criteria (e.g., type). Try broadening search terms if needed.");
                  setStatus(LoadingStatus.NoResults);
                  setHospitals([]);
@@ -305,7 +305,7 @@ const Emergency = () => {
         }
     } catch (error: any) {
         if (!isMounted.current) return; // Check mount status in catch block
-        console.error("Error during Place.searchByText:", error);
+        // console.error("Error during Place.searchByText:", error);
 
         let userMessage = `Failed to find hospitals. Please try again later.`;
         let specificStatus = LoadingStatus.SearchError; // Default to general search error
@@ -350,17 +350,17 @@ const Emergency = () => {
       if (window.google?.maps?.places?.Place?.searchByText) {
           findNearbyHospitalsByText(); // Call the corrected search function
       } else {
-          console.warn("Search triggered, but Place.searchByText still not ready. Waiting briefly...");
+          // console.warn("Search triggered, but Place.searchByText still not ready. Waiting briefly...");
           // Optionally add a small delay and retry check, or rely on user refresh/next state change
           const checkAgain = setTimeout(() => {
               if (!isMounted.current) return;
               if (status === LoadingStatus.SearchingHospitals && !window.google?.maps?.places?.Place?.searchByText) {
-                  console.error("Place.searchByText still not available after delay. Check API Key/Console.");
+                  // console.error("Place.searchByText still not available after delay. Check API Key/Console.");
                   setErrorMessage("Map service failed to initialize properly. Ensure 'Places API (New)' is enabled and refresh.");
                   setStatus(LoadingStatus.MapsError);
               } else if (status === LoadingStatus.SearchingHospitals && currentLocation && mapsApiLoaded.current) {
                   // It might be ready now, try searching again if conditions still met
-                  console.log("Retrying search after brief delay...");
+                  // console.log("Retrying search after brief delay...");
                   findNearbyHospitalsByText();
               }
           }, 1500); // Check again after 1.5 seconds

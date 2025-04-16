@@ -114,14 +114,14 @@ const ProfilePage = () => {
                 // Photo
                 if (profileData.profilePhotoId) {
                     try {
-                        console.log(`Attempting to get preview for photo ID: ${profileData.profilePhotoId}`);
+                        // console.log(`Attempting to get preview for photo ID: ${profileData.profilePhotoId}`);
                         const previewUrl = getFilePreview(profileData.profilePhotoId, profileBucketId);
-                        console.log("Preview URL object:", previewUrl);
+                        // console.log("Preview URL object:", previewUrl);
                         const url = previewUrl?.toString();
-                        console.log("Final URL string:", url);
+                        // console.log("Final URL string:", url);
                         setFetchedPhotoUrl(url || null);
                     } catch (e) { 
-                        console.error("Error getting profile photo preview:", e);}
+                        /*console.error("Error getting profile photo preview:", e);*/}
                 }
             } else {
                 // Reset form fields if no profile exists
@@ -137,7 +137,7 @@ const ProfilePage = () => {
             // Note: Health data state setting removed as it's not displayed directly
 
         } catch (error) {
-            console.error('Error fetching data:', error);
+            // console.error('Error fetching data:', error);
             toast({ title: "Failed to load data", description: "Could not retrieve profile data.", variant: "destructive" });
         } finally {
             setIsLoading(false);
@@ -183,33 +183,33 @@ const ProfilePage = () => {
         try {
             // Pass user.$id to uploadProfilePhoto
             const uploadedFile = await uploadProfilePhoto(profilePhotoFile, user.$id);
-            console.log('Uploaded file details:', uploadedFile); // Debug log
+            // console.log('Uploaded file details:', uploadedFile); // Debug log
     
             const profileUpdateData = { profilePhotoId: uploadedFile.$id };
             let currentProfile = profile;
     
             // Ensure profile exists before updating
             if (!currentProfile?.$id) {
-                console.log("Profile not found locally, attempting to fetch/create before update...");
+                // console.log("Profile not found locally, attempting to fetch/create before update...");
                 // Attempt to fetch again just in case state was stale, or create if truly missing
                 currentProfile = await getUserProfile(user.$id);
                 if (!currentProfile) {
-                    console.log("Profile not found on server, creating new one...");
+                    // console.log("Profile not found on server, creating new one...");
                     currentProfile = await createUserProfile(user.$id, { name: name || user.name, email: user.email });
                     setProfile(currentProfile); // Update local state with the new profile
-                    console.log("New profile created:", currentProfile);
+                    // console.log("New profile created:", currentProfile);
                 } else {
                      setProfile(currentProfile); // Update local state if fetched
-                     console.log("Fetched existing profile:", currentProfile);
+                    //  console.log("Fetched existing profile:", currentProfile);
                 }
             }
     
             // Now update the profile with the photo ID
             if (currentProfile?.$id) {
-                console.log(`Updating profile ${currentProfile.$id} with photo ID ${uploadedFile.$id}`);
+                // console.log(`Updating profile ${currentProfile.$id} with photo ID ${uploadedFile.$id}`);
                 await updateUserProfile(currentProfile.$id, profileUpdateData);
             } else {
-                console.error("Profile ID still missing after fetch/create attempt.");
+                // console.error("Profile ID still missing after fetch/create attempt.");
                 throw new Error("Could not associate photo with profile.");
             }
     
@@ -219,11 +219,11 @@ const ProfilePage = () => {
             const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
     
-            console.log("Refreshing data after photo upload...");
+            // console.log("Refreshing data after photo upload...");
             await fetchData(); // Refresh all data to get the new photo URL
     
         } catch (error: any) {
-            console.error('Error uploading photo:', error);
+            // console.error('Error uploading photo:', error);
             toast({ title: "Upload failed", description: error.message || "Could not upload photo.", variant: "destructive" });
         } finally {
             setIsUploading(false);
@@ -294,7 +294,7 @@ const ProfilePage = () => {
                  try {
                     const url = getFilePreview(updatedProfile.profilePhotoId, profileBucketId)?.toString();
                     setFetchedPhotoUrl(url || null);
-                 } catch(e) { console.error("Error getting preview after save:", e); }
+                 } catch(e) { /*console.error("Error getting preview after save:", e);*/ }
              } else {
                  setFetchedPhotoUrl(null);
              }
@@ -304,7 +304,7 @@ const ProfilePage = () => {
 
             toast({ title: "Profile saved successfully" });
         } catch (error: any) {
-            console.error('Error saving profile:', error);
+            // console.error('Error saving profile:', error);
             toast({ title: "Save failed", description: error.message || "Could not save profile.", variant: "destructive" });
         } finally {
             setIsSaving(false);
@@ -320,7 +320,7 @@ const ProfilePage = () => {
         try {
             await createBloodPressureReading(user.$id, { systolic: sysNum, diastolic: diaNum });
             toast({ title: "BP Reading Saved" }); setSystolic(''); setDiastolic('');
-        } catch (error) { console.error("Error saving BP:", error); toast({ title: "Save Failed", description: "Could not save BP reading.", variant: "destructive" }); }
+        } catch (error) { /*console.error("Error saving BP:", error);*/ toast({ title: "Save Failed", description: "Could not save BP reading.", variant: "destructive" }); }
         finally { setIsSavingHealthData(null); }
     };
     const handleSaveSugar = async () => {
@@ -331,7 +331,7 @@ const ProfilePage = () => {
         try {
             await createBloodSugarReading(user.$id, { level: levelNum, measurementType: sugarType });
             toast({ title: "Blood Sugar Reading Saved" }); setSugarLevel('');
-        } catch (error) { console.error("Error saving Sugar:", error); toast({ title: "Save Failed", description: "Could not save Blood Sugar reading.", variant: "destructive" }); }
+        } catch (error) { /*console.error("Error saving Sugar:", error);*/ toast({ title: "Save Failed", description: "Could not save Blood Sugar reading.", variant: "destructive" }); }
         finally { setIsSavingHealthData(null); }
     };
     const handleSaveWeight = async () => {
@@ -342,7 +342,7 @@ const ProfilePage = () => {
         try {
             await createWeightReading(user.$id, { weight: weightNum, unit: weightUnit });
             toast({ title: "Weight Reading Saved" }); setWeight('');
-        } catch (error) { console.error("Error saving Weight:", error); toast({ title: "Save Failed", description: "Could not save Weight reading.", variant: "destructive" }); }
+        } catch (error) { /*console.error("Error saving Weight:", error);*/ toast({ title: "Save Failed", description: "Could not save Weight reading.", variant: "destructive" }); }
         finally { setIsSavingHealthData(null); }
     };
 

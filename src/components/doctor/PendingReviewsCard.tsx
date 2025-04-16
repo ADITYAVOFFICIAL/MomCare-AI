@@ -62,14 +62,14 @@ const PendingReviewsCard: React.FC = () => {
     // Function to get file URL (ensure medicalBucketId is exported from appwrite.ts)
     const getDocumentUrl = (fileId: string) => {
         if (!medicalBucketId) {
-            console.error("Medical Bucket ID not configured for file preview.");
+            // console.error("Medical Bucket ID not configured for file preview.");
             return '#';
         }
         try {
             const url = getFilePreview(fileId, medicalBucketId); // Using getFileView
             return url?.href || '#';
         } catch (e) {
-            console.error("Error generating file preview URL:", e);
+            // console.error("Error generating file preview URL:", e);
             return '#';
         }
     };

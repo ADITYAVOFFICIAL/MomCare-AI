@@ -55,7 +55,7 @@ const HomePage = () => {
 
     if (isErrorUserCount) {
       // Show an error indicator
-      console.error("Error fetching user count:", userCountError); // Log the error for debugging
+      // console.error("Error fetching user count:", userCountError); // Log the error for debugging
       return (
         <span className="font-medium flex items-center" title={userCountError instanceof Error ? userCountError.message : 'Could not load user count'}>
           <AlertCircle className="h-5 w-5 text-red-500 inline-block mr-1" /> --

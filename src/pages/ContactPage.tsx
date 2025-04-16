@@ -78,7 +78,7 @@ const ContactPage: React.FC = () => {
     // --- Simulate API Call/Backend Submission ---
     // In a real app, replace this with your actual API call (e.g., using fetch or axios)
     // to send the data to your backend (like an Appwrite function or email service).
-    console.log('Submitting contact form:', { name, email, subject, message });
+    // console.log('Submitting contact form:', { name, email, subject, message });
 
     try {
       // Replace with: await sendContactFormData({ name, email, subject, message });
@@ -99,7 +99,7 @@ const ContactPage: React.FC = () => {
 
     } catch (error: any) {
       // --- Error Handling ---
-      console.error('Error submitting contact form:', error);
+      // console.error('Error submitting contact form:', error);
       toast({
         title: "Submission Failed",
         description: error?.message || "Could not send your message. Please try again later or use the contact details provided.",

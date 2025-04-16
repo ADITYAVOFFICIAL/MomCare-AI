@@ -169,7 +169,7 @@ const parseAppointmentDateTime = (app: Appointment): Date | null => {
       // If only date was valid, return it (represents start of the day UTC)
       return parsedDate;
     } catch (error) {
-      console.error('Appt parse error:', app.date, app.time, error);
+      // console.error('Appt parse error:', app.date, app.time, error);
       return null; // Return null on any parsing error
     }
 };
@@ -222,7 +222,7 @@ const formatHistoryForUI = (history: ChatHistoryMessage[]): ChatUIMessage[] => {
         } else if (msg.role === 'model') {
           role = 'model';
         } else {
-          console.warn(`Invalid role encountered in history: ${msg.role}. Skipping message.`);
+          // console.warn(`Invalid role encountered in history: ${msg.role}. Skipping message.`);
           return null; // Skip messages with roles other than user/model
         }
 
@@ -279,7 +279,7 @@ const formatGroqMessagesForUI = (groqMessages: ChatCompletionMessageParam[]): Ch
         } else if (gm.role === 'system') {
             return null; // Don't display system messages in the UI
         } else {
-             console.warn(`Invalid role from Groq message: ${gm.role}. Skipping.`);
+            //  console.warn(`Invalid role from Groq message: ${gm.role}. Skipping.`);
              return null;
         }
 
@@ -410,7 +410,7 @@ const ChatPage: React.FC = () => {
       if (profile?.preExistingConditions) setPreExistingConditions(profile.preExistingConditions);
 
     } catch (error: unknown) {
-      console.error("Error fetching context:", error);
+      // console.error("Error fetching context:", error);
       const errorMsg = error instanceof Error ? error.message : "Could not load your profile and health data.";
       setError(errorMsg); // Set error state for potential display
       toast({ title: "Context Error", description: errorMsg, variant: "destructive" });
@@ -470,7 +470,7 @@ const ChatPage: React.FC = () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort(); // Stop recognition
         recognitionRef.current = null; // Clear ref
-        console.log("Speech recognition aborted on unmount.");
+        // console.log("Speech recognition aborted on unmount.");
       }
     };
   }, []);
@@ -536,7 +536,7 @@ const ChatPage: React.FC = () => {
       setMessages(formattedInitialUiMessages); // Update UI state
       setShowPreChat(false); // Hide pre-chat form, show chat interface
 
-      console.log("Saving initial messages for new session:", newSessionId);
+      // console.log("Saving initial messages for new session:", newSessionId);
       // Save user and initial assistant message to Appwrite DB asynchronously
       for (const msg of initialApiMessages) {
         const contentToSave = getTextContentFromMessage(msg);
@@ -550,16 +550,16 @@ const ChatPage: React.FC = () => {
               newSessionId
             );
           } catch (saveError) {
-            console.error(`Failed to save initial ${msg.role} message to DB:`, saveError);
+            // console.error(`Failed to save initial ${msg.role} message to DB:`, saveError);
             // Non-critical error, maybe just log or show mild toast
             toast({ title: "History Save Warning", description: `Could not save initial ${msg.role} message.`, variant: "default" }); // Fix TS2322: Changed "warning" to "default"
           }
         }
       }
-      console.log("Initial messages saved to DB.");
+      // console.log("Initial messages saved to DB.");
 
     } catch (error: unknown) {
-      console.error("Error starting chat:", error);
+      // console.error("Error starting chat:", error);
       const errorMsg = error instanceof Error ? error.message : "An unknown error occurred while starting the chat.";
       setError(errorMsg); // Display error
       toast({ title: "Chat Start Failed", description: errorMsg, variant: "destructive" });
@@ -589,7 +589,7 @@ const ChatPage: React.FC = () => {
     if (isLoading || !user?.$id || !currentSessionId || chatHistoryForApi.length === 0) {
         if (!currentSessionId) setError("Error: No active chat session found.");
         if (chatHistoryForApi.length === 0) setError("Error: Chat history is missing. Please restart.");
-        console.warn("Send message prevented:", { isLoading, userId: user?.$id, currentSessionId, historyLength: chatHistoryForApi.length });
+        // console.warn("Send message prevented:", { isLoading, userId: user?.$id, currentSessionId, historyLength: chatHistoryForApi.length });
         return;
     }
     // Stop voice recording if active
@@ -641,7 +641,7 @@ const ChatPage: React.FC = () => {
     // This state preserves the full context including the system prompt for subsequent calls
     const updatedHistoryForApi = [...chatHistoryForApi, newUserApiMessage];
     setChatHistoryForApi(updatedHistoryForApi);
-    console.log("Updated main API history state with new user message.");
+    // console.log("Updated main API history state with new user message.");
 
     // 4. Prepare History *Specifically for THIS API Call* (Handle Groq Image+System Incompatibility)
     let historyForThisApiCall: ChatCompletionMessageParam[];
@@ -655,11 +655,11 @@ const ChatPage: React.FC = () => {
         // If an image exists anywhere in the history, filter out the system message for this API call
         // This is a workaround for Groq models that don't support system prompts with images
         historyForThisApiCall = updatedHistoryForApi.filter(msg => msg.role !== 'system');
-        console.warn("History contains an image. Sending API request WITHOUT the system prompt due to API limitations.");
+        // console.warn("History contains an image. Sending API request WITHOUT the system prompt due to API limitations.");
     } else {
         // If no images are in the history, send the full history including the system prompt
         historyForThisApiCall = updatedHistoryForApi;
-        console.log("History is text-only. Sending API request WITH the system prompt.");
+        // console.log("History is text-only. Sending API request WITH the system prompt.");
     }
     // --- End of Groq Incompatibility Workaround ---
 
@@ -669,9 +669,9 @@ const ChatPage: React.FC = () => {
     if (userContentToSave) {
       try {
         await saveChatMessage(user.$id, 'user', userContentToSave, currentSessionId);
-         console.log("User message saved to DB.");
+        //  console.log("User message saved to DB.");
       } catch (saveError) {
-        console.error("Failed to save user message to DB:", saveError);
+        // console.error("Failed to save user message to DB:", saveError);
         // Non-critical, inform user subtly
         toast({ title: "History Save Warning", description: "Could not save your message to history.", variant: "default" });
       }
@@ -686,7 +686,7 @@ const ChatPage: React.FC = () => {
     let streamErrorOccurred = false; // Flag to track if the stream callback reported an error
     let finalModelMessageSaved = false; // Flag to track if the final model response was saved
 
-    console.log(`Sending ${historyForThisApiCall.length} messages to Groq stream API (history includes image=${historyContainsImage})...`);
+    // console.log(`Sending ${historyForThisApiCall.length} messages to Groq stream API (history includes image=${historyContainsImage})...`);
     try {
       await groqService.sendMessageStream(
         historyForThisApiCall, // *** Use the correctly prepared history ***
@@ -695,7 +695,7 @@ const ChatPage: React.FC = () => {
           setStreamingResponse(accumulatedResponse); // Update UI with streaming text
         },
         (streamError) => { // onError callback
-          console.error("Groq stream error callback:", streamError);
+          // console.error("Groq stream error callback:", streamError);
           streamErrorOccurred = true;
           // Provide more specific user feedback for known issues
           const errorMsg = streamError.message && (streamError.message.includes('prompting with images is incompatible') || streamError.message.includes('system message') || streamError.message.includes('system messages'))
@@ -707,7 +707,7 @@ const ChatPage: React.FC = () => {
           setIsLoading(false); setStreamingResponse('');
         },
         async () => { // onComplete callback (stream finished)
-          console.log("Groq stream completed.");
+          // console.log("Groq stream completed.");
           setIsLoading(false); // Turn off loading indicator
 
           if (!streamErrorOccurred && accumulatedResponse.trim()) {
@@ -717,25 +717,25 @@ const ChatPage: React.FC = () => {
 
             // Update the main API history state to include the assistant's final response
             setChatHistoryForApi(prev => [...prev, modelApiMessage]);
-            console.log("Added final assistant message to main API history state.");
+            // console.log("Added final assistant message to main API history state.");
 
             // Add the final model message to the UI state
             const modelUiMessage: ChatUIMessage = { role: 'model', parts: [{ type: 'text', content: finalResponse }] };
             setMessages(prev => [...prev, modelUiMessage]);
-            console.log("Added final assistant message to UI state.");
+            // console.log("Added final assistant message to UI state.");
 
             // Save the final model response to the database
             try {
               await saveChatMessage(user.$id, 'model', finalResponse, currentSessionId);
               finalModelMessageSaved = true;
-              console.log("Final assistant message saved to DB.");
+              // console.log("Final assistant message saved to DB.");
             } catch (saveError) {
-              console.error("Failed to save final assistant message:", saveError);
+              // console.error("Failed to save final assistant message:", saveError);
               toast({ title: "History Save Warning", description: "Could not save AI response to history.", variant: "default" });
             }
           } else if (!streamErrorOccurred) {
               // Stream completed successfully but produced no text content
-              console.warn("Stream completed successfully but produced no text content.");
+              // console.warn("Stream completed successfully but produced no text content.");
               // Check if the user message just sent contained an image
               const userMessageHadImage = apiMessageParts.some(p => p.type === 'image_url');
               if (userMessageHadImage && !finalModelMessageSaved) {
@@ -752,7 +752,7 @@ const ChatPage: React.FC = () => {
       );
     } catch (error: unknown) {
       // Catch errors during the initiation of the stream itself
-      console.error("Error initiating stream:", error);
+      // console.error("Error initiating stream:", error);
       const errorMsg = error instanceof Error ? error.message : "Could not send message to the AI service.";
       setError(`Failed to send message: ${errorMsg}`);
       toast({ title: "Send Error", description: errorMsg, variant: "destructive" });
@@ -771,7 +771,7 @@ const ChatPage: React.FC = () => {
     // Prevent loading if already loading, starting a new chat, or loading the same session
     if (!user?.$id || isLoading || isStartingChat || sessionId === currentSessionId) return;
 
-    console.log(`Attempting to load session: ${sessionId}`);
+    // console.log(`Attempting to load session: ${sessionId}`);
     setIsLoading(true); // Indicate loading state
     setError(null); // Clear previous errors
     setMessages([]); // Clear current UI messages
@@ -784,13 +784,13 @@ const ChatPage: React.FC = () => {
     try {
       // 1. Fetch history from Appwrite DB for the selected session
       const appwriteHistory: ChatHistoryMessage[] = await getUserChatHistoryForSession(user.$id, sessionId, 500); // Limit history length if needed
-      console.log(`Fetched ${appwriteHistory.length} messages from DB for session ${sessionId}`);
+      // console.log(`Fetched ${appwriteHistory.length} messages from DB for session ${sessionId}`);
 
       // 2. Ensure User Profile context is available (fetch if necessary)
       // It's needed to generate the correct system prompt for the loaded session
       let currentProfile = userProfile;
       if (!currentProfile && !isContextLoading) {
-          console.log("Profile data missing for context, attempting quick fetch...");
+          // console.log("Profile data missing for context, attempting quick fetch...");
           await fetchInitialContext(); // Await refetch
           // Re-access potentially updated state after fetch (might not be immediate)
           // This is tricky. A better approach might be to disable session loading until context is ready.
@@ -799,7 +799,7 @@ const ChatPage: React.FC = () => {
           // Note: This relies on fetchInitialContext updating the `userProfile` state variable.
           currentProfile = userProfile; // Re-read potentially updated profile
           if (!currentProfile) {
-              console.warn("Failed to reload profile data for session context.");
+              // console.warn("Failed to reload profile data for session context.");
               // Proceed without profile data, system prompt will be less personalized
           }
       }
@@ -826,7 +826,7 @@ const ChatPage: React.FC = () => {
       // 5. Combine system prompt + loaded history for the main API state
       const finalApiHistory = [systemMessage, ...loadedApiHistory];
       setChatHistoryForApi(finalApiHistory);
-      console.log(`Loaded session ${sessionId}. Set API history with ${finalApiHistory.length} messages (incl. system).`);
+      // console.log(`Loaded session ${sessionId}. Set API history with ${finalApiHistory.length} messages (incl. system).`);
 
       // 6. Format the loaded DB history for UI display
       if (appwriteHistory.length === 0) {
@@ -835,7 +835,7 @@ const ChatPage: React.FC = () => {
       } else {
           const uiMessages = formatHistoryForUI(appwriteHistory); // Use the corrected formatter
           setMessages(uiMessages);
-          console.log(`Displayed ${uiMessages.length} messages in the UI.`);
+          // console.log(`Displayed ${uiMessages.length} messages in the UI.`);
       }
 
       // 7. Determine pregnancy context at the start of the loaded chat (best effort)
@@ -858,12 +858,12 @@ const ChatPage: React.FC = () => {
       startWeeks = startWeeks === undefined ? currentProfile?.weeksPregnant : startWeeks;
       setChatStartWeeksPregnant(startWeeks); // Set session-specific start weeks
       setPregnancyTrimester(calculateTrimester(startWeeks)); // Update trimester display
-      console.log(`Determined start weeks for loaded session context: ${startWeeks}, Trimester: ${calculateTrimester(startWeeks)}`);
+      // console.log(`Determined start weeks for loaded session context: ${startWeeks}, Trimester: ${calculateTrimester(startWeeks)}`);
 
       toast({ title: "Session Loaded", description: `Displaying chat history for session ...${sessionId.slice(-6)}` });
 
     } catch (error: unknown) {
-      console.error("Error loading session:", error);
+      // console.error("Error loading session:", error);
       const errorMsg = error instanceof Error ? error.message : "Could not load the selected chat session.";
       setError(`Failed to load session: ${errorMsg}`);
       toast({ title: "Load Failed", description: errorMsg, variant: "destructive" });
@@ -932,7 +932,7 @@ const ChatPage: React.FC = () => {
       await addBookmark(user.$id, { messageContent: contentToSave });
       bookmarkToast.update({ id: bookmarkToast.id, title: "Bookmark Added", description: "Saved successfully.", variant: "default" });
     } catch (error: unknown) {
-      console.error("Bookmark Failed:", error);
+      // console.error("Bookmark Failed:", error);
       const errorMsg = error instanceof Error ? error.message : "Could not save the bookmark.";
       bookmarkToast.update({ id: bookmarkToast.id, title: "Bookmark Failed", description: errorMsg, variant: "destructive" });
     }
@@ -1057,7 +1057,7 @@ const ChatPage: React.FC = () => {
           pdfToast.update({ id: pdfToast.id, title: "Export Successful", description: `Saved as ${filename}`, variant: "default" });
 
       } catch (error: unknown) {
-          console.error("PDF export error:", error);
+          // console.error("PDF export error:", error);
           const errorMsg = error instanceof Error ? error.message : "Could not generate the PDF file.";
            pdfToast.update({ id: pdfToast.id, title: "Export Failed", description: errorMsg, variant: "destructive" });
       } finally {
@@ -1141,7 +1141,7 @@ const ChatPage: React.FC = () => {
     if (isRecording) {
       if (recognitionRef.current) {
         recognitionRef.current.stop(); // Trigger onend event handler
-         console.log("Stopping speech recognition manually via button.");
+        //  console.log("Stopping speech recognition manually via button.");
       } else {
           // Should not happen if isRecording is true, but handle defensively
           setIsRecording(false); // Force state reset
@@ -1194,7 +1194,7 @@ const ChatPage: React.FC = () => {
 
       // Event: Recognition ends (naturally, via stop(), or error)
       recognition.onend = () => {
-          console.log("Speech recognition ended.");
+          // console.log("Speech recognition ended.");
           setIsRecording(false); // Update recording state
           recognitionRef.current = null; // Clear the ref
           // Trim the final result in the input field after recognition stops
@@ -1206,7 +1206,7 @@ const ChatPage: React.FC = () => {
 
       // Event: Error occurred during recognition
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("Speech recognition error:", event.error, event.message);
+        // console.error("Speech recognition error:", event.error, event.message);
         let description = `Error: ${event.error}. ${event.message || 'Please try again.'}`;
         if (event.error === 'no-speech') description = "No speech detected. Microphone might not be picking up audio.";
         if (event.error === 'audio-capture') description = "Microphone error. Check connection and system audio settings.";
@@ -1223,13 +1223,13 @@ const ChatPage: React.FC = () => {
 
       // Start the recognition process
       recognition.start();
-      console.log("Speech recognition started.");
+      // console.log("Speech recognition started.");
       setIsRecording(true); // Update recording state
       setInputMessage(''); // Clear input field when starting new recording
       finalTranscript = ''; // Reset final transcript accumulator
 
     } catch (error: unknown) {
-      console.error("Voice input initialization failed:", error);
+      // console.error("Voice input initialization failed:", error);
       toast({ title: "Voice Input Failed", description: "Could not start the voice input service.", variant: "destructive" });
       setIsRecording(false); // Ensure state is reset
       recognitionRef.current = null; // Clear ref
@@ -1547,7 +1547,7 @@ const ChatPage: React.FC = () => {
                         {messages.map((message, index) => {
                            // Basic validation for message structure (already filtered in formatters, but good practice)
                            if (!message || !message.role || !Array.isArray(message.parts)) {
-                               console.warn("Skipping render of invalid message structure:", message);
+                              //  console.warn("Skipping render of invalid message structure:", message);
                                return null;
                            }
                            // Create a more robust key using index and session ID
@@ -1583,7 +1583,7 @@ const ChatPage: React.FC = () => {
                                         className="max-w-full h-auto max-h-60 object-contain rounded-md border border-gray-300 dark:border-gray-600 my-1 bg-gray-100 dark:bg-gray-600"
                                         // Basic error handling for broken image links
                                         onError={(e) => {
-                                          console.warn(`Failed to load image: ${part.content}`);
+                                          // console.warn(`Failed to load image: ${part.content}`);
                                           const target = e.target as HTMLImageElement;
                                           target.alt = 'Image failed to load';
                                           // Optionally replace with a placeholder or hide

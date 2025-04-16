@@ -88,14 +88,14 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null }); // Start loading, clear previous errors
           await login(email, password); // Call the Appwrite login function
           const currentUser = await getCurrentUser(); // Fetch the full user object
-          console.log("User logged in:", currentUser); // Debug log
+          // console.log("User logged in:", currentUser); // Debug log
           set({
             user: currentUser, // Store the complete user object (includes labels)
             isAuthenticated: !!currentUser, // Set authenticated status
             isLoading: false // Stop loading
           });
         } catch (error: any) {
-          console.error("Login error in store:", error);
+          // console.error("Login error in store:", error);
           const errorMessage = error.message || 'Login failed. Please check your credentials.';
           set({
             isLoading: false, // Stop loading on error
@@ -112,14 +112,14 @@ export const useAuthStore = create<AuthState>()(
           await createAccount(email, password, name);
           // Fetch the newly created and automatically logged-in user
           const currentUser = await getCurrentUser();
-          console.log("User signed up and logged in:", currentUser); // Debug log
+          // console.log("User signed up and logged in:", currentUser); // Debug log
           set({
             user: currentUser, // Store the complete user object
             isAuthenticated: !!currentUser,
             isLoading: false
           });
         } catch (error: any) {
-          console.error("Signup error in store:", error);
+          // console.error("Signup error in store:", error);
           const errorMessage = error.message || 'Signup failed. Please try again.';
           set({
             isLoading: false,
@@ -133,7 +133,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           set({ isLoading: true }); // Indicate loading state
           await logout(); // Call the Appwrite logout function
-          console.log("User logged out"); // Debug log
+          // console.log("User logged out"); // Debug log
           set({
             user: null, // Clear user data
             isAuthenticated: false, // Set not authenticated
@@ -141,7 +141,7 @@ export const useAuthStore = create<AuthState>()(
             error: null // Clear any previous errors
           });
         } catch (error: any) {
-          console.error("Logout error in store:", error);
+          // console.error("Logout error in store:", error);
           // Even if logout fails remotely, clear local state for better UX
           set({
             user: null,
@@ -158,12 +158,12 @@ export const useAuthStore = create<AuthState>()(
         // This helps avoid race conditions on initial load if called multiple times.
         // We check isLoading specifically because the initial state is isLoading: true.
         if (get().isLoading || get().user === null) {
-             console.log("Running checkAuth..."); // Debug log
+            //  console.log("Running checkAuth..."); // Debug log
              try {
                 // Fetch the current user from Appwrite
                 // getCurrentUser() returns null if not logged in (handles 401)
                 const currentUser = await getCurrentUser();
-                console.log("checkAuth result:", currentUser?.$id || 'No user found'); // Debug log
+                // console.log("checkAuth result:", currentUser?.$id || 'No user found'); // Debug log
                 set({
                    user: currentUser, // Store the fetched user (or null)
                    isAuthenticated: !!currentUser, // Update authenticated status
@@ -172,7 +172,7 @@ export const useAuthStore = create<AuthState>()(
                 });
              } catch (error) {
                 // This catch block handles unexpected errors during checkAuth (e.g., network issues)
-                console.error("checkAuth unexpected error:", error);
+                // console.error("checkAuth unexpected error:", error);
                 set({
                    user: null, // Assume not authenticated on error
                    isAuthenticated: false,
@@ -182,7 +182,7 @@ export const useAuthStore = create<AuthState>()(
                 });
              }
         } else {
-             console.log("checkAuth skipped (already loaded/authenticated)"); // Debug log
+            //  console.log("checkAuth skipped (already loaded/authenticated)"); // Debug log
              // If somehow isLoading is still true but user exists, ensure it's set to false
              if (get().isLoading) {
                  set({ isLoading: false });

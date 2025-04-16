@@ -56,7 +56,7 @@ const ReadingListItem: React.FC<ReadingListItemProps> = ({ reading, type, onDele
             value = 'N/A'; // Indicate missing data clearly
         }
     } catch (error) {
-        console.error("Error formatting reading item:", error, reading);
+        // console.error("Error formatting reading item:", error, reading);
         value = 'Error';
     }
 
@@ -64,7 +64,7 @@ const ReadingListItem: React.FC<ReadingListItemProps> = ({ reading, type, onDele
         if (reading?.$id && !isDeleting) {
             onDelete(reading.$id, type);
         } else if (!reading?.$id) {
-            console.error("Cannot delete reading: Missing $id", reading);
+            // console.error("Cannot delete reading: Missing $id", reading);
         }
     };
 
@@ -249,7 +249,7 @@ const MedCharts: React.FC<MedChartsProps> = ({
             onDataRefreshNeeded();
 
         } catch (error: any) {
-            console.error(`Error deleting ${type} reading with ID ${id}:`, error);
+            // console.error(`Error deleting ${type} reading with ID ${id}:`, error);
             toast({
                 title: "Deletion Failed",
                 description: error.message || `Could not delete the ${type} reading.`,

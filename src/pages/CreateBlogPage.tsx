@@ -142,7 +142,7 @@ const CreateBlogPage: React.FC = () => {
         }
         setIsFormatting(true); // Show loading indicator on the button
         try {
-            console.log("Attempting to format content with Groq AI...");
+            // console.log("Attempting to format content with Groq AI...");
             // *** MODIFIED: Use the Groq formatting function ***
             const formattedContent = await formatContentWithGroq(contentMd);
             setContentMd(formattedContent); // Update editor content
@@ -158,7 +158,7 @@ const CreateBlogPage: React.FC = () => {
                 description: errorMessage,
                 variant: "destructive"
             });
-            console.error("Groq AI formatting error:", error);
+            // console.error("Groq AI formatting error:", error);
         } finally {
             setIsFormatting(false); // Hide loading indicator
         }
@@ -205,7 +205,7 @@ const CreateBlogPage: React.FC = () => {
                 // publishedAt: new Date().toISOString(), // Optionally set publish date here
             };
 
-            console.log("Submitting blog post data:", postData);
+            // console.log("Submitting blog post data:", postData);
             await createBlogPost(postData); // Call the Appwrite function
 
             toast({ title: "Blog Post Created", description: `"${postData.title}" published successfully.` });
@@ -221,7 +221,7 @@ const CreateBlogPage: React.FC = () => {
             navigate('/resources'); // Navigate to the resources page
 
         } catch (error: unknown) {
-            console.error('Error creating blog post:', error);
+            // console.error('Error creating blog post:', error);
             let description = "An unexpected error occurred while creating the post.";
             if (error instanceof Error) {
                 // Check for specific Appwrite slug conflict error message

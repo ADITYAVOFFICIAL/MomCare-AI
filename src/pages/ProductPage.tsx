@@ -100,13 +100,13 @@ const ProductPage: React.FC = () => {
     const clearProfileCache = useCallback((userId?: string) => {
         const id = userId || user?.$id;
         if (!id) return;
-        console.log(`Clearing profile cache for user: ${id}`);
+        // console.log(`Clearing profile cache for user: ${id}`);
         try {
             sessionStorage.removeItem(PROFILE_CACHE_KEY_PREFIX + id);
             sessionStorage.removeItem(PROFILE_TIMESTAMP_KEY_PREFIX + id);
             sessionStorage.removeItem(PROFILE_USER_UPDATED_AT_KEY_PREFIX + id);
         } catch (error) {
-             console.error("Error clearing profile cache:", error);
+            //  console.error("Error clearing profile cache:", error);
         }
     }, [user?.$id]);
 
@@ -119,7 +119,7 @@ const ProductPage: React.FC = () => {
             setAllBookmarkedProducts([]);
             return;
         }
-        console.log("Fetching product bookmarks...");
+        // console.log("Fetching product bookmarks...");
         setLoadingBookmarks(true);
         try {
             const bookmarks = await getUserProductBookmarks(user.$id);
@@ -127,9 +127,9 @@ const ProductPage: React.FC = () => {
             const newMap = new Map<string, string>();
             bookmarks.forEach(bm => { newMap.set(bm.productId, bm.$id); });
             setBookmarkMap(newMap);
-            console.log(`Loaded ${newMap.size} bookmarks.`);
+            // console.log(`Loaded ${newMap.size} bookmarks.`);
         } catch (err) {
-            console.error("Error fetching bookmarks:", err);
+            // console.error("Error fetching bookmarks:", err);
             toast({ title: "Bookmark Error", description: "Could not load saved products.", variant: "destructive" });
             setBookmarkMap(new Map());
             setAllBookmarkedProducts([]);
@@ -154,16 +154,16 @@ const ProductPage: React.FC = () => {
 
         if (activeSearchPrompt) {
             fetchLabel = 'prompt-based';
-            console.log(`Fetching ${fetchLabel} recommendations for prompt: "${activeSearchPrompt}", category: ${categoryArg || 'All'}`);
+            // console.log(`Fetching ${fetchLabel} recommendations for prompt: "${activeSearchPrompt}", category: ${categoryArg || 'All'}`);
             fetchFn = () => getPromptBasedRecommendations(activeSearchPrompt, categoryArg);
         } else if (profile) {
             fetchLabel = 'personalized';
-            console.log(`Fetching ${fetchLabel} recommendations for profile, category: ${categoryArg || 'All'}`);
+            // console.log(`Fetching ${fetchLabel} recommendations for profile, category: ${categoryArg || 'All'}`);
             fetchFn = () => getPersonalizedRecommendations(profile, categoryArg);
             setPersonalizedFetchAttempted(true);
         } else {
             fetchLabel = 'general';
-            console.log(`Fetching ${fetchLabel} recommendations, category: ${categoryArg || 'All'}`);
+            // console.log(`Fetching ${fetchLabel} recommendations, category: ${categoryArg || 'All'}`);
             fetchFn = () => getGeneralRecommendations(categoryArg);
         }
 
@@ -175,11 +175,11 @@ const ProductPage: React.FC = () => {
                 setRecommendations(results);
                 setRecommendationType(fetchLabel);
                 if (results.length === 0) {
-                    console.log(`AI returned 0 ${fetchLabel} recommendations.`);
+                    // console.log(`AI returned 0 ${fetchLabel} recommendations.`);
                 }
             }
         } catch (err: unknown) {
-            console.error(`Error fetching ${fetchLabel} recommendations:`, err);
+            // console.error(`Error fetching ${fetchLabel} recommendations:`, err);
             const message = err instanceof Error ? err.message : `Could not fetch ${fetchLabel} recommendations.`;
             if (isMounted.current) {
                 setError(`Failed to get ${fetchLabel} recommendations: ${message}`);
@@ -229,7 +229,7 @@ const ProductPage: React.FC = () => {
                         now - cachedTimestamp < CACHE_DURATION_MS &&
                         cachedUserUpdatedAt === currentUserUpdatedAt
                     ) {
-                        console.log(`Using cached profile for user: ${userId}`);
+                        // console.log(`Using cached profile for user: ${userId}`);
                         const cachedProfile = JSON.parse(cachedProfileJSON) as UserProfile;
                          if (isMounted.current) {
                             setProfile(cachedProfile);
@@ -239,25 +239,25 @@ const ProductPage: React.FC = () => {
                          }
                         return cachedProfile;
                     } else {
-                        console.log(`Cache invalid for user ${userId}. Reason:`, {
-                            expired: now - cachedTimestamp >= CACHE_DURATION_MS,
-                            userUpdated: cachedUserUpdatedAt !== currentUserUpdatedAt,
-                            invalidTimestamp: isNaN(cachedTimestamp)
-                        });
+                        // console.log(`Cache invalid for user ${userId}. Reason:`, {
+                        //     expired: now - cachedTimestamp >= CACHE_DURATION_MS,
+                        //     userUpdated: cachedUserUpdatedAt !== currentUserUpdatedAt,
+                        //     invalidTimestamp: isNaN(cachedTimestamp)
+                        // });
                         clearProfileCache(userId);
                     }
                 }
             } catch (error) {
-                console.error("Error reading profile cache:", error);
+                // console.error("Error reading profile cache:", error);
                 clearProfileCache(userId);
             }
         } else {
-             console.log(`Forcing profile refresh for user: ${userId}`);
+            //  console.log(`Forcing profile refresh for user: ${userId}`);
              clearProfileCache(userId);
         }
 
         // --- Fetch from API ---
-        console.log("Fetching user profile from API...");
+        // console.log("Fetching user profile from API...");
         if (isMounted.current) {
              setLoadingProfile(true);
              setError(null);
@@ -274,16 +274,16 @@ const ProductPage: React.FC = () => {
                     sessionStorage.setItem(cacheKey, JSON.stringify(userProfile));
                     sessionStorage.setItem(timestampKey, Date.now().toString());
                     sessionStorage.setItem(userUpdatedAtKey, currentUserUpdatedAt);
-                    console.log(`Profile cached for user: ${userId}`);
+                    // console.log(`Profile cached for user: ${userId}`);
                 } catch (cacheError) {
-                    console.error("Error writing profile cache:", cacheError);
+                    // console.error("Error writing profile cache:", cacheError);
                     // Clear cache just in case it was partially written or caused the error
                     clearProfileCache(userId);
                 }
             }
             return userProfile;
         } catch (err: unknown) {
-            console.error("Error fetching user profile:", err);
+            // console.error("Error fetching user profile:", err);
             const message = err instanceof Error ? err.message : "Could not load profile.";
             if (isMounted.current) {
                 setError(`Failed to load user profile: ${message}`);
@@ -304,7 +304,7 @@ const ProductPage: React.FC = () => {
     // Handle Mount State and Initial Load
     useEffect(() => {
         isMounted.current = true;
-        console.log("Component Mounted. Auth State:", isAuthenticated);
+        // console.log("Component Mounted. Auth State:", isAuthenticated);
 
         if (isAuthenticated === true && user?.$id) {
             fetchProfile(); // Initial fetch (uses cache if valid)
@@ -332,7 +332,7 @@ const ProductPage: React.FC = () => {
 
         // Cleanup on unmount
         return () => {
-            console.log("Component Unmounting");
+            // console.log("Component Unmounting");
             isMounted.current = false;
         };
         // Run only on mount and when auth state/user ID changes fundamentally
@@ -354,11 +354,11 @@ const ProductPage: React.FC = () => {
             // If we have a cached timestamp and it *doesn't* match the current user's updatedAt,
             // it means the user object was updated externally (e.g., profile edit). Force refresh.
             if (cachedUserUpdatedAt && cachedUserUpdatedAt !== currentUserUpdatedAt) {
-                console.log("User object updated externally. Forcing profile refresh.");
+                // console.log("User object updated externally. Forcing profile refresh.");
                 fetchProfile(true); // Force refresh
             }
         } catch (error) {
-             console.error("Error checking cached user update timestamp:", error);
+            //  console.error("Error checking cached user update timestamp:", error);
         }
 
     }, [user?.$updatedAt, user?.$id, isAuthenticated, fetchProfile]); // Depend on user.$updatedAt
@@ -367,17 +367,17 @@ const ProductPage: React.FC = () => {
     useEffect(() => {
         // Only run if component is mounted
         if (!isMounted.current) {
-            console.log("Recommendation Trigger Effect: Skipped (unmounted)");
+            // console.log("Recommendation Trigger Effect: Skipped (unmounted)");
             return;
         }
 
         // Don't fetch recommendations while the profile is actively being loaded
         if (loadingProfile) {
-             console.log("Recommendation Trigger Effect: Skipped (profile loading)");
+            //  console.log("Recommendation Trigger Effect: Skipped (profile loading)");
              return;
         }
 
-        console.log("Recommendation Trigger Effect: Running. isAuthenticated =", isAuthenticated, "fetchCycleId =", fetchCycleId, "profile exists:", !!profile, "personalized attempted:", personalizedFetchAttempted);
+        // console.log("Recommendation Trigger Effect: Running. isAuthenticated =", isAuthenticated, "fetchCycleId =", fetchCycleId, "profile exists:", !!profile, "personalized attempted:", personalizedFetchAttempted);
 
         // Only fetch if authenticated
         if (isAuthenticated === true) {
@@ -386,7 +386,7 @@ const ProductPage: React.FC = () => {
             if (profile !== null || personalizedFetchAttempted || activeSearchPrompt) {
                  fetchRecommendations();
             } else {
-                 console.log("Recommendation Trigger Effect: Skipped (conditions not met - no profile/attempt/search)");
+                //  console.log("Recommendation Trigger Effect: Skipped (conditions not met - no profile/attempt/search)");
             }
         }
         // Dependencies control when this effect re-runs
@@ -411,7 +411,7 @@ const ProductPage: React.FC = () => {
 
     const handleCategoryChange = (value: string): void => {
         if (loadingRecommendations || loadingProfile) return;
-        console.log(`Category changed to: "${value || 'All'}"`);
+        // console.log(`Category changed to: "${value || 'All'}"`);
         // Only trigger fetch if category actually changes
         if (value !== selectedCategory) {
             setSelectedCategory(value);
@@ -423,7 +423,7 @@ const ProductPage: React.FC = () => {
         if (loadingRecommendations || loadingProfile) return;
         // Only trigger fetch if there was an active search/filter
         if (activeSearchPrompt || selectedCategory) {
-            console.log("Clearing search prompt and category.");
+            // console.log("Clearing search prompt and category.");
             setUserPrompt('');
             setActiveSearchPrompt('');
             setSelectedCategory('');
@@ -433,7 +433,7 @@ const ProductPage: React.FC = () => {
 
     const handleManualRefresh = (): void => {
         if (loadingRecommendations || loadingProfile) return;
-        console.log("Manual refresh triggered.");
+        // console.log("Manual refresh triggered.");
         // Force profile re-fetch (clears cache inside fetchProfile)
         fetchProfile(true);
         // Force recommendation refetch as well, in case profile data is identical but recommendations failed before
@@ -448,7 +448,7 @@ const ProductPage: React.FC = () => {
     // Handler to explicitly fetch general recommendations
     const handleFetchGeneral = useCallback((): void => {
         if (loadingRecommendations || loadingProfile) return;
-        console.log("Manually fetching general recommendations...");
+        // console.log("Manually fetching general recommendations...");
         // Clear search/filter that might prevent general fetch
         setActiveSearchPrompt('');
         setSelectedCategory('');
@@ -474,7 +474,7 @@ const ProductPage: React.FC = () => {
         try {
             if (existingBookmarkId) {
                 // --- Remove Bookmark ---
-                console.log(`Removing bookmark for product: ${productName} (Doc ID: ${existingBookmarkId})`);
+                // console.log(`Removing bookmark for product: ${productName} (Doc ID: ${existingBookmarkId})`);
                 await removeProductBookmarkById(existingBookmarkId);
 
                 if (isMounted.current) {
@@ -490,7 +490,7 @@ const ProductPage: React.FC = () => {
             } else if ('description' in product && 'category' in product && 'reasoning' in product && 'searchKeywords' in product) {
                 // --- Add Bookmark ---
                 // Ensure we have all necessary fields from ProductRecommendation
-                console.log(`Adding bookmark for product: ${product.name} (Product ID: ${product.id})`);
+                // console.log(`Adding bookmark for product: ${product.name} (Product ID: ${product.id})`);
                 const newBookmark = await addProductBookmark(user.$id, product as ProductRecommendation);
 
                  if (isMounted.current) {
@@ -504,11 +504,11 @@ const ProductPage: React.FC = () => {
                     toast({ title: "Bookmark Added", description: `"${product.name}" saved.` });
                  }
             } else {
-                 console.warn("Attempted to add bookmark without full product details (e.g., from bookmark list or incomplete data). Product:", product);
+                //  console.warn("Attempted to add bookmark without full product details (e.g., from bookmark list or incomplete data). Product:", product);
                  toast({ title: "Bookmark Error", description: "Cannot save item - missing details.", variant: "destructive" });
             }
         } catch (error: unknown) {
-            console.error("Error toggling bookmark:", error);
+            // console.error("Error toggling bookmark:", error);
             const action = existingBookmarkId ? "removing" : "adding";
             const message = error instanceof Error ? error.message : `Could not complete ${action} bookmark action.`;
              if (isMounted.current) {

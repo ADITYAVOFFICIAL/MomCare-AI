@@ -61,7 +61,7 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
 
   // Effect to populate form when appointment data changes
   useEffect(() => {
-    console.log("EditAppointmentModal: useEffect triggered. Appointment:", appointment);
+    // console.log("EditAppointmentModal: useEffect triggered. Appointment:", appointment);
     if (appointment) {
       try {
          // *** FIX: Parse the ISO date string directly ***
@@ -69,26 +69,26 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
 
          // Check if the date is valid after parsing
          if (isNaN(appointmentDate.getTime())) {
-            console.error("EditAppointmentModal Error: Invalid date received from appointment:", appointment.date);
+            // console.error("EditAppointmentModal Error: Invalid date received from appointment:", appointment.date);
             setDate(undefined); // Set to undefined if invalid
          } else {
-            console.log("EditAppointmentModal: Parsed date:", appointmentDate);
+            // console.log("EditAppointmentModal: Parsed date:", appointmentDate);
             setDate(appointmentDate);
          }
 
       } catch (e) {
-         console.error("EditAppointmentModal Error: Failed to parse appointment date:", appointment.date, e);
+        //  console.error("EditAppointmentModal Error: Failed to parse appointment date:", appointment.date, e);
          setDate(undefined); // Fallback to undefined on error
       }
 
       // Set time and notes
       setTime(appointment.time);
       setNotes(appointment.notes || '');
-      console.log("EditAppointmentModal: Set time:", appointment.time, "Set notes:", appointment.notes || '');
+      // console.log("EditAppointmentModal: Set time:", appointment.time, "Set notes:", appointment.notes || '');
 
     } else {
       // Reset form if no appointment is provided (e.g., when modal closes)
-      console.log("EditAppointmentModal: No appointment, resetting form.");
+      // console.log("EditAppointmentModal: No appointment, resetting form.");
       setDate(undefined);
       setTime(undefined);
       setNotes('');
@@ -98,7 +98,7 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
   // Handler for saving changes
   const handleSaveChanges = async () => {
     if (!appointment) {
-        console.error("EditAppointmentModal Error: handleSaveChanges called without an appointment.");
+        // console.error("EditAppointmentModal Error: handleSaveChanges called without an appointment.");
         return; // Should not happen if modal is open correctly
     }
     if (!date || !time) {
@@ -116,7 +116,7 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
       // Appwrite might accept the full ISO string too, but formatting ensures consistency
       const formattedDate = format(date, 'yyyy-MM-dd');
 
-      console.log(`EditAppointmentModal: Updating appointment ${appointment.$id} with:`, { date: formattedDate, time, notes });
+      // console.log(`EditAppointmentModal: Updating appointment ${appointment.$id} with:`, { date: formattedDate, time, notes });
 
       await updateAppointment(appointment.$id, {
         date: formattedDate, // Send formatted date
@@ -133,7 +133,7 @@ const EditAppointmentModal: React.FC<EditAppointmentModalProps> = ({
       onAppointmentUpdated(); // Trigger refresh in the parent component
       onClose(); // Close the modal
     } catch (error) {
-      console.error('EditAppointmentModal Error: Failed to update appointment:', error);
+      // console.error('EditAppointmentModal Error: Failed to update appointment:', error);
       toast({
         title: "Update Failed",
         description: "Could not save changes. Please try again.",

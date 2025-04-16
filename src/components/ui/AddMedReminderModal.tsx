@@ -48,7 +48,7 @@ const AddMedReminderModal: React.FC<AddMedReminderModalProps> = ({ isOpen, onClo
              setTimes(newTimes);
         } else {
             // Maybe show a small inline error or just don't update
-            console.warn("Invalid time format. Use HH:MM");
+            // console.warn("Invalid time format. Use HH:MM");
         }
     };
 
@@ -88,7 +88,7 @@ const AddMedReminderModal: React.FC<AddMedReminderModalProps> = ({ isOpen, onClo
             onClose(); // Close modal on success
         } catch (error) {
             // Error toast should be handled in the parent onSubmit function
-            console.error("Submission failed in modal:", error);
+            // console.error("Submission failed in modal:", error);
         } finally {
             setIsSaving(false);
         }

@@ -206,14 +206,14 @@ const parseAppointmentDateTime = (app: Appointment): Date | null => {
         const datePart = app.date.split('T')[0]; // Get YYYY-MM-DD part
         const baseDate = parseISO(`${datePart}T00:00:00`); // Use ISO format for reliable parsing
         if (isNaN(baseDate.getTime())) {
-             console.warn(`Invalid date part encountered: ${app.date}`);
+            //  console.warn(`Invalid date part encountered: ${app.date}`);
              return null;
         }
 
         // Handle time part (flexible: HH:mm, h:mm AM/PM)
         const timeMatch = app.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
         if (!timeMatch) {
-            console.warn(`Invalid time format encountered: ${app.time}`);
+            // console.warn(`Invalid time format encountered: ${app.time}`);
             return null; // Or try other parsing methods if needed
         }
 
@@ -238,7 +238,7 @@ const parseAppointmentDateTime = (app: Appointment): Date | null => {
 
         return isNaN(combinedDate.getTime()) ? null : combinedDate;
     } catch (error) {
-        console.error('Error parsing appointment date/time:', app.date, app.time, error);
+        // console.error('Error parsing appointment date/time:', app.date, app.time, error);
         return null;
     }
 };
@@ -313,7 +313,7 @@ const DashboardPage: React.FC = () => {
             if (results[0].status === 'fulfilled') {
                 setProfile(results[0].value as UserProfile | null);
             } else {
-                console.error('Error fetching profile:', results[0].reason); setProfile(null);
+                // console.error('Error fetching profile:', results[0].reason); setProfile(null);
                 toast({ title: "Profile Load Failed", variant: "destructive" });
             }
             setIsLoadingProfile(false);
@@ -334,7 +334,7 @@ const DashboardPage: React.FC = () => {
                     app.appointmentType && classTypes.includes(app.appointmentType as ClassAppointmentType)
                 ));
             } else {
-                console.error('Error fetching appointments:', results[1].reason);
+                // console.error('Error fetching appointments:', results[1].reason);
                 setUpcomingDoctorAppointments([]); setUpcomingClassAppointments([]);
                 toast({ title: "Appointments Load Failed", variant: "destructive" });
             }
@@ -342,22 +342,22 @@ const DashboardPage: React.FC = () => {
 
             // Process Health Data (Indices 2, 3, 4) - Unchanged
             if (results[2].status === 'fulfilled') setBpReadings(results[2].value as BloodPressureReading[] ?? []);
-            else { console.error('Error fetching BP:', results[2].reason); setBpReadings([]); }
+            else { /* console.error('Error fetching BP:', results[2].reason); */ setBpReadings([]); }
             if (results[3].status === 'fulfilled') setSugarReadings(results[3].value as BloodSugarReading[] ?? []);
-            else { console.error('Error fetching Sugar:', results[3].reason); setSugarReadings([]); }
+            else { /* console.error('Error fetching Sugar:', results[3].reason); */ setSugarReadings([]); }
             if (results[4].status === 'fulfilled') setWeightReadings(results[4].value as WeightReading[] ?? []);
-            else { console.error('Error fetching Weight:', results[4].reason); setWeightReadings([]); }
+            else { /* console.error('Error fetching Weight:', results[4].reason); */ setWeightReadings([]); }
             setIsLoadingHealthData(false);
 
             // Process Medication Reminders (Index 5) - Unchanged
             if (results[5].status === 'fulfilled') setMedReminders(results[5].value as MedicationReminder[] ?? []);
-            else { console.error('Error fetching Reminders:', results[5].reason); setMedReminders([]);
+            else { /* console.error('Error fetching Reminders:', results[5].reason); */ setMedReminders([]);
                    toast({ title: "Reminders Load Failed", variant: "destructive" }); }
             setIsLoadingMedReminders(false);
 
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-            console.error('Critical error setting up dashboard data fetch:', error);
+            // console.error('Critical error setting up dashboard data fetch:', error);
             toast({ title: "Dashboard Load Failed", description: `${errorMessage}. Please refresh.`, variant: "destructive" });
             setProfile(null); setUpcomingDoctorAppointments([]); setUpcomingClassAppointments([]);
             setBpReadings([]); setSugarReadings([]); setWeightReadings([]); setMedReminders([]);
@@ -392,7 +392,7 @@ const DashboardPage: React.FC = () => {
             await fetchData(); // Refetch all data
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : "Could not delete.";
-            console.error('Error deleting appointment:', error);
+            // console.error('Error deleting appointment:', error);
             toast({ title: "Deletion Failed", description: errorMessage, variant: "destructive" });
         } finally {
             setDeletingAppointmentId(null); setAppointmentToDelete(null); setIsDeleteDialogOpen(false);
@@ -410,7 +410,7 @@ const DashboardPage: React.FC = () => {
             await fetchData(); // Refresh data
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : "Could not save.";
-            console.error("Error saving reminder:", error);
+            // console.error("Error saving reminder:", error);
             toast({ title: "Save Failed", description: errorMessage, variant: "destructive" });
             throw error;
         }
@@ -430,7 +430,7 @@ const DashboardPage: React.FC = () => {
             await fetchData(); // Refresh data
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : "Could not delete.";
-            console.error('Error deleting reminder:', error);
+            // console.error('Error deleting reminder:', error);
             toast({ title: "Deletion Failed", description: errorMessage, variant: "destructive" });
         } finally {
             setDeletingMedReminderId(null); setMedReminderToDelete(null); setIsDeleteMedReminderDialogOpen(false);
@@ -487,7 +487,7 @@ const DashboardPage: React.FC = () => {
             if (!dateTimeObj) throw new Error("Invalid date/time components from parsing");
             return format(dateTimeObj, "EEE, MMM d, yyyy 'at' h:mm a");
         } catch (error) {
-            console.warn("Fallback formatting used for appointment:", dateString, time, error);
+            // console.warn("Fallback formatting used for appointment:", dateString, time, error);
             const datePart = dateString.split('T')[0] || dateString;
             return `${datePart} at ${time}`;
         }

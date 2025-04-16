@@ -127,7 +127,7 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
     }, []);
 
     const addBlock = useCallback((x: number, z: number, width: number, depth: number, isFalling = false): THREE.Mesh | null => {
-        if (!gameInstance.current) { console.error("AddBlock: Game instance not ready."); return null; }
+        if (!gameInstance.current) { /*console.error("AddBlock: Game instance not ready.");*/ return null; }
         const { scene, stack } = gameInstance.current;
         const stackIndex = stack.length;
         const y = BOX_HEIGHT * stackIndex;
@@ -241,7 +241,7 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
 
                     if (overlap < MIN_OVERLAP_FOR_SUCCESS) {
                         // Use scoreRef.current to get the latest score
-                        console.log(`Game Over - Missed! Overlap: ${overlap.toFixed(3)} Score: ${scoreRef.current}`);
+                        // console.log(`Game Over - Missed! Overlap: ${overlap.toFixed(3)} Score: ${scoreRef.current}`);
                         scene.remove(activeBlock); disposeObject(activeBlock);
                         addBlock(droppedPos.x, droppedPos.z, droppedWidth, droppedDepth, true);
                         gameInstance.current.activeBlock = null;
@@ -255,7 +255,7 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
                         scene.remove(activeBlock); disposeObject(activeBlock); gameInstance.current.activeBlock = null;
 
                         if (isPerfect) {
-                            console.log("Perfect Match!"); scoreIncrement += PERFECT_MATCH_SCORE_BONUS;
+                            // console.log("Perfect Match!"); scoreIncrement += PERFECT_MATCH_SCORE_BONUS;
                             addBlock(currentPos.x, currentPos.z, currentSize.x, currentSize.z);
                         } else {
                             const stackedX = checkAxis === 'x' ? currentPos.x + deltaPos / 2 : currentPos.x;
@@ -303,7 +303,7 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
         // Render
         try { renderer.render(scene, camera); }
         catch (error) {
-            console.error("Render error:", error);
+            // console.error("Render error:", error);
             if (gameInstance.current?.animationFrameId) cancelAnimationFrame(gameInstance.current.animationFrameId);
             gameInstance.current.animationFrameId = undefined; // Stop loop on render error
         }
@@ -313,8 +313,8 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
 
     // IMPORTANT FIX: Define resetGame AFTER animate
     const resetGame = useCallback(() => {
-        if (!gameInstance.current || !mountRef.current) { console.error("Reset: Game instance not ready."); return; }
-        console.log("Resetting game...");
+        if (!gameInstance.current || !mountRef.current) { /*console.error("Reset: Game instance not ready.");*/ return; }
+        // console.log("Resetting game...");
         if (gameInstance.current.animationFrameId) cancelAnimationFrame(gameInstance.current.animationFrameId);
         gameInstance.current.animationFrameId = undefined;
 
@@ -339,7 +339,7 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
             baseMesh.position.y = 0; gameInstance.current.lastBlock = gameInstance.current.stack[0];
             gameInstance.current.camera.position.y = gameInstance.current.cameraTargetY;
             gameInstance.current.camera.lookAt(0, BOX_HEIGHT / 2, 0);
-        } else { console.error("Failed to create base block during reset!"); return; }
+        } else { /*console.error("Failed to create base block during reset!");*/ return; }
 
         setTimeout(() => {
             if (gameInstance.current && gameInstance.current.isMounted && gameInstance.current.gamePhase !== 'gameOver') {
@@ -358,7 +358,7 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
         if (!mountRef.current || gameInstance.current) return;
         const currentMount = mountRef.current;
         const instance: Partial<GameInstance> = { isMounted: true };
-        console.log("Initializing Three.js...");
+        // console.log("Initializing Three.js...");
 
         try {
             const { clientWidth: width, clientHeight: height } = currentMount;
@@ -409,7 +409,7 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
             window.addEventListener('resize', handleResize);
 
             return () => { // Cleanup
-                console.log("Cleaning up Three.js instance...");
+                // console.log("Cleaning up Three.js instance...");
                 instance.isMounted = false; window.removeEventListener('resize', handleResize);
                 if (gameInstance.current) {
                     if (gameInstance.current.animationFrameId) cancelAnimationFrame(gameInstance.current.animationFrameId);
@@ -422,7 +422,7 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
                 }
                 gameInstance.current = null;
             };
-        } catch (error) { console.error("Three.js Initialization Error:", error); }
+        } catch (error) { /*console.error("Three.js Initialization Error:", error);*/ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Mount effect
 
@@ -434,7 +434,7 @@ const StackingGameFinal: React.FC<StackingGameProps> = memo(({ onGameOver, disab
     }, [disabled, isGameOver]);
 
     const handleRestart = useCallback(() => {
-        if (!gameInstance.current) { console.error("Cannot restart: No game instance."); return; }
+        if (!gameInstance.current) { /*console.error("Cannot restart: No game instance.");*/ return; }
         resetGame();
     }, [resetGame]);
 
