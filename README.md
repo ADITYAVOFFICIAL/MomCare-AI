@@ -36,7 +36,7 @@ In essence, MomCare AI consolidates essential pregnancy tools and enhances them 
 ## 🧠 Team & Approach
 
 ### Team Name:
-`SOLO HACKER`
+`SOLO`
 
 ### Team Members:
 - ADITYA VERMA ([GitHub](https://github.com/ADITYAVOFFICIAL/))
