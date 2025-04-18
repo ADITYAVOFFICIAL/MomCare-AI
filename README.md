@@ -100,15 +100,38 @@ In essence, MomCare AI consolidates essential pregnancy tools and enhances them 
 - ✅ **Health Tracking:** Log and visualize Blood Pressure, Blood Sugar, and Weight readings.
 - ✅ **Medication Reminders:** Create and manage medication schedules.
 
-*(Consider adding 1-2 key screenshots/GIFs here if space permits)*
+---
 
 ---
 
+## 📊 Charts & Diagrams
+
+Visual representations of the application's architecture and user flows.
+
+**1. Overall Workflow Diagram:**
+![Overall Workflow Diagram](charts_and_diagrams/Workflow_Diagram.png)
+
+**2. User Flow Diagram:**
+![User Flow Diagram](charts_and_diagrams/User_Flow_Diagram.png)
+
+**3. Fluvio Real-Time Dataflow (Forum):**
+![Fluvio Dataflow Architecture](charts_and_diagrams/Fluvio_InfinyOn_Dataflow_architecture_and_Design.png)
+
+**4. Groq AI Workflow:**
+![Groq Workflow Diagram](charts_and_diagrams/Groq_Workflow_Diagram.png)
+
+**5. Monad Blockchain Interaction (Game):**
+![Monad Blockchain Integration](charts_and_diagrams/Monad_Blockchain.png)
+
+---
+
+
+
 ## 📽️ Demo & Deliverables
 
-- **Demo Video Link:** [Paste YouTube or Loom link here - **Ensure < 3 mins & showcases sponsor tech**]
-- **Pitch Deck / PPT Link:** [Paste Google Slides / PDF link here - **Target 6 content slides**]
-- **Deployment Link:** [Paste Vercel link here]
+- **Demo Video Link:** [https://www.youtube.com/watch?v=fd2j-rFeL5E&ab_channel=ADITYAVERMA]
+- **Pitch Deck / PPT Link:** [https://drive.google.com/file/d/1U6kVwUrLB6Y0MfWazPkGwRbMPNY0dbrk/view]
+- **Deployment Link:** [https://momcareai.vercel.app/]
 
 ---
 
