@@ -209,7 +209,7 @@ The application should now be running on `http://localhost:8080` (as configured 
 ## 📎 Resources / Credits
 
 - **Frameworks/Libraries:** React, Vite, TypeScript, Tailwind CSS, Shadcn UI, Ethers.js, Matter.js, TanStack Query, Zustand, date-fns, React Markdown, Lucide React Icons, Framer Motion, Recharts, `react-hook-form`, `zod`. (See [`package.json`](package.json) for full list)
-- **Services:** Appwrite (Backend & Database), Groq (AI), Vercel (Hosting), Google Maps (Geolocation/Places).
+- **Services:** Appwrite (Backend & Database), Groq (AI),Fluvio InfinyOn, Vercel (Hosting), Google Maps (Geolocation/Places).
 - **Blockchain:** Monad Platform.
 - **Inspiration/Acknowledgements:** Mention any specific resources, tutorials, or individuals who helped.
 
