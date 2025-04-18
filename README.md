@@ -154,7 +154,7 @@ Visual representations of the application's architecture and user flows.
 - An `.env.development.local` file in the project root (see below).
 
 ### Environment Variables (`.env.development.local`):
-Create this file in the project root and add your keys:
+Create this file in the project root (`adityavofficial-momcare-ai/.env.development.local`) and add your keys:
 ```env
 # Appwrite Configuration (Get from your Appwrite Cloud project)
 VITE_PUBLIC_APPWRITE_ENDPOINT="https://cloud.appwrite.io/v1"
@@ -176,7 +176,7 @@ VITE_PUBLIC_APPWRITE_BOOKMARKED_PRODUCTS_COLLECTION_ID="YOUR_BOOKMARKED_PRODUCTS
 VITE_PUBLIC_APPWRITE_PROFILE_BUCKET_ID="YOUR_PROFILE_BUCKET_ID"
 VITE_PUBLIC_APPWRITE_MEDICAL_BUCKET_ID="YOUR_MEDICAL_BUCKET_ID"
 VITE_PUBLIC_APPWRITE_CHAT_IMAGES_BUCKET_ID="YOUR_CHAT_IMAGES_BUCKET_ID"
-# VITE_PUBLIC_APPWRITE_USER_COUNT_FUNCTION_ID="YOUR_USER_COUNT_FUNCTION_ID" # Optional
+VITE_PUBLIC_APPWRITE_USER_COUNT_FUNCTION_ID="YOUR_USER_COUNT_FUNCTION_ID" # Function ID from functions/getUserCount
 
 # Groq API Key (Get from GroqCloud)
 VITE_PUBLIC_GROQ_API_KEY="YOUR_GROQ_API_KEY"
@@ -185,38 +185,53 @@ VITE_PUBLIC_GROQ_API_KEY="YOUR_GROQ_API_KEY"
 VITE_PUBLIC_GOOGLE_MAPS_API_KEY="YOUR_GOOGLE_MAPS_API_KEY"
 
 # Fluvio Access Key (Get from InfinyOn Cloud - needed for backend consumer)
-# Note: This might be needed server-side for the backend consumer, not necessarily Vite public.
-# Adjust if your setup requires it client-side (unlikely for consumer).
-# VITE_PUBLIC_FLUVIO_ACCESS_KEY="YOUR_FLUVIO_KEY" # Check if needed client-side
-# Ensure the corresponding non-Vite prefixed variable is set for the backend service/functions.
+# Note: This needs to be set in the environment where momcare-backend runs, not necessarily Vite public.
+# Ensure FLUVIO_ACCESS_KEY or VITE_PUBLIC_FLUVIO_ACCESS_KEY (as used in backend) is set.
+# Check momcare-backend/src/lib/fluvioService.ts for the exact variable name used.
 
 # Optional: OnChainKit Key if used
-# VITE_PUBLIC_ONCHAINKIT_API_KEY="YOUR_ONCHAINKIT_KEY"```
-*(See `src/lib/appwrite.ts`, `src/utils/appwriteConfig.ts`, and potentially `momcare-backend` / `appwrite-functions` environment setup)*
+# VITE_PUBLIC_ONCHAINKIT_API_KEY="YOUR_ONCHAINKIT_KEY"
+```
+
+(See src/lib/appwrite.ts, src/utils/appwriteConfig.ts, momcare-backend/src/lib/fluvioService.ts and Appwrite function environment variable setup)
 
 ### Local Setup:
 ```bash
 # 1. Clone the repository
 git clone https://github.com/ADITYAVOFFICIAL/momcare-ai # Use your actual repo URL
-cd momcare-ai
+cd adityavofficial-momcare-ai
 
-# 2. Install dependencies (Frontend)
+# 2. Install dependencies (Frontend - assumes you are in the root directory)
 bun install # or npm install / yarn install
 
 # 3. Set up environment variables (Frontend)
 # Create the .env.development.local file in the root as described above
 
-# 4. Setup Backend Consumer & Appwrite Functions (Requires separate setup/env vars)
-# cd momcare-backend && bun install && # Setup .env for backend (Fluvio Key, Appwrite Keys)
-# cd ../appwrite-functions/produceForumPostEvent && npm install && # Setup function env vars
-# cd ../produceForumVoteEvent && npm install && # Setup function env vars
-# (Refer to Appwrite/Fluvio docs for deploying functions and running backend service)
+# 4. Setup & Run Backend WebSocket Service (Fluvio Consumer)
+#    (Requires separate terminal)
+cd momcare-backend
+bun install # or npm install / yarn install
+# Create a .env file inside momcare-backend with necessary keys
+# (APPWRITE_*, FLUVIO_ACCESS_KEY or VITE_PUBLIC_FLUVIO_ACCESS_KEY, WEBSOCKET_PORT)
+bun run dev # or bun run start (Check package.json scripts)
+cd .. # Go back to the root directory
 
-# 5. Start the development server (Frontend)
+# 5. Setup Appwrite Functions (Requires separate setup & deployment)
+# --- Deploy Appwrite Functions (use Appwrite CLI or Console) ---
+# a) Deploy the Forum Event Handlers:
+#    - Navigate to appwrite-functions/produceForumPostEvent, set up env vars (API Key, Fluvio Key etc.), deploy.
+#    - Navigate to appwrite-functions/produceForumVoteEvent, set up env vars, deploy.
+# b) Deploy the User Count Function:
+#    - Navigate to functions/getUserCount, set up env vars (API Key), deploy.
+# c) Ensure functions are triggered by the correct Appwrite Database events.
+#    (Refer to Appwrite documentation for function deployment)
+
+# 6. Start the development server (Frontend - assumes you are in the root directory)
 bun run dev # or npm run dev / yarn dev
 ```
 
-The application should now be running on `http://localhost:8080` (as configured in [`vite.config.ts`](vite.config.ts)). The backend is handled by Appwrite Cloud.
+The frontend application should now be running on http://localhost:8080 (as configured in vite.config.ts).
+Most backend functionality (Auth, DB, Storage) is handled by Appwrite Cloud, but the momcare-backend service must be running separately to handle real-time forum updates via Fluvio. The Appwrite Functions also need to be deployed to Appwrite Cloud.
 
 ---
 
