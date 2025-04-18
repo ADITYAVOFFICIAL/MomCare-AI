@@ -102,6 +102,23 @@ In essence, MomCare AI consolidates essential pregnancy tools and enhances them 
 
 ---
 
+## 📊 Demo
+
+**1. Home Page:**
+![HomePage](charts_and_diagrams/demo/home.png)
+
+**2. Dashboard:**
+![Dashboard](charts_and_diagrams/demo/dashboard.png)
+
+**3. Resources and Blogs:**
+![Resources and Blogs](charts_and_diagrams/demo/blogs.png)
+
+**4. Emergency Page:**
+![Emergency Page](charts_and_diagrams/demo/emergency.png)
+
+**5.Products Page:**
+![ProductsPage](charts_and_diagrams/demo/products.png)
+
 ---
 
 ## 📊 Charts & Diagrams
@@ -140,8 +157,6 @@ Visual representations of the application's architecture and user flows.
 - [✅] **All members of the team completed the mandatory task - Followed at least 2 of our social channels and filled the form** (Details in Participant Manual)
 - [✅] **All members of the team completed Bonus Task 1 - Sharing of Badges and filled the form (2 points)** (Details in Participant Manual)
 - [✅] **All members of the team completed Bonus Task 2 - Signing up for Sprint.dev and filled the form (3 points)** (Details in Participant Manual)
-
-*(Mark with ✅ if completed)*
 
 ---
 
