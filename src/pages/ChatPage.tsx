@@ -19,7 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // --- UI Imports ---
 import MainLayout from '@/components/layout/MainLayout';
-import ChatHistorySidebar, { ChatHistorySidebarProps } from '@/components/ui/ChatHistorySidebar'; // Assume props are defined here
+import ChatHistorySidebar, { ChatHistorySidebarProps } from '@/components/chat/ChatHistorySidebar'; // Assume props are defined here
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';

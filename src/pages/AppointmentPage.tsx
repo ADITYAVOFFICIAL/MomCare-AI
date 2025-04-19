@@ -41,8 +41,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'; // Adjust path if needed
-import AppointmentItem from '@/components/ui/AppointmentItem'; // Adjust path if needed
-import EditAppointmentModal from '@/components/ui/EditAppointmentModal'; // Adjust path if needed
+import AppointmentItem from '@/components/appointments/AppointmentItem'; // Adjust path if needed
+import EditAppointmentModal from '@/components/appointments/EditAppointmentModal'; // Adjust path if needed
 import {
   AlertDialog,
   AlertDialogAction,

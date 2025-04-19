@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+
 import {
     getUserProfile,
     updateUserProfile,
@@ -41,6 +42,7 @@ const ProfilePage = () => {
     const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
     const [localPhotoPreview, setLocalPhotoPreview] = useState<string | null>(null);
     const [fetchedPhotoUrl, setFetchedPhotoUrl] = useState<string | null>(null);
+    const [languagePreference, setLanguagePreference] = useState<string>('en');
     const { user } = useAuthStore();
     const { toast } = useToast();
 
@@ -110,6 +112,7 @@ const ProfilePage = () => {
                 setDietaryPreferences(profileData.dietaryPreferences?.join(', ') || ''); // Join array into comma-separated string
                 setActivityLevel(profileData.activityLevel || '');
                 setChatTonePreference(profileData.chatTonePreference || '');
+                setLanguagePreference(profileData.languagePreference || 'en');
 
                 // Photo
                 if (profileData.profilePhotoId) {
@@ -132,6 +135,7 @@ const ProfilePage = () => {
                 setPreviousPregnancies(''); setDeliveryPreference(''); setPartnerSupport('');
                 setWorkSituation(''); setDietaryPreferences(''); setActivityLevel('');
                 setChatTonePreference('');
+                setLanguagePreference('en');
             }
 
             // Note: Health data state setting removed as it's not displayed directly
@@ -277,6 +281,7 @@ const ProfilePage = () => {
                     dietaryPreferences: dietaryPrefsArray, // Keep as is or empty array
                     activityLevel: activityLevel, // Allow empty string
                     chatTonePreference: chatTonePreference, // Allow empty string
+                    languagePreference: languagePreference || 'en',
                 };
 
             // --- Save Logic ---
@@ -530,6 +535,38 @@ const ProfilePage = () => {
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
+                                                <div className="space-y-1.5">
+                                                <Label htmlFor="languagePreference">Preferred Language</Label>
+                                                <Select value={languagePreference} onValueChange={setLanguagePreference}>
+                                                    <SelectTrigger id="languagePreference"><SelectValue placeholder="Select language" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {/* International */}
+                                                        <SelectItem value="en">English</SelectItem>
+                                                        <SelectItem value="es">Español (Spanish)</SelectItem>
+                                                        <SelectItem value="fr">Français (French)</SelectItem>
+                                                        <SelectItem value="de">Deutsch (German)</SelectItem>
+                                                        <SelectItem value="zh">中文 (Mandarin)</SelectItem>
+                                                        <SelectItem value="ja">日本語 (Japanese)</SelectItem>
+                                                        <SelectItem value="pt">Português (Portuguese)</SelectItem>
+                                                        <SelectItem value="ru">Русский (Russian)</SelectItem>
+                                                        <SelectItem value="ar">العربية (Arabic)</SelectItem>
+                                                        {/* Indian */}
+                                                        <SelectItem value="hi">हिन्दी (Hindi)</SelectItem>
+                                                        <SelectItem value="bn">বাংলা (Bengali)</SelectItem>
+                                                        <SelectItem value="te">తెలుగు (Telugu)</SelectItem>
+                                                        <SelectItem value="mr">मराठी (Marathi)</SelectItem>
+                                                        <SelectItem value="ta">தமிழ் (Tamil)</SelectItem>
+                                                        <SelectItem value="ur">اردو (Urdu)</SelectItem>
+                                                        <SelectItem value="gu">ગુજરાતી (Gujarati)</SelectItem>
+                                                        <SelectItem value="kn">ಕನ್ನಡ (Kannada)</SelectItem>
+                                                        <SelectItem value="or">ଓଡ଼ିଆ (Odia)</SelectItem>
+                                                        <SelectItem value="ml">മലയാളം (Malayalam)</SelectItem>
+                                                        <SelectItem value="pa">ਪੰਜਾਬੀ (Punjabi)</SelectItem>
+                                                        <SelectItem value="as">অসমীয়া (Assamese)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <p className="text-xs text-gray-500">Select your preferred language for the interface.</p>
+                                            </div>
                                             </div>
                                             {/* Dietary Preferences */}
                                             <div className="mt-4 space-y-1.5">

@@ -26,10 +26,10 @@ import {
   Tag,
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
-import Hero from '@/components/ui/Hero';
+import Hero from '@/components/home/Hero';
 import { useQuery } from '@tanstack/react-query';   // <-- Import useQuery
 import { getTotalUserCount } from '@/lib/appwrite';
-import HomeCta from '@/components/ui/HomeCta'; 
+import HomeCta from '@/components/home/HomeCta'; 
 
 const HomePage = () => {
   const {

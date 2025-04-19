@@ -210,6 +210,7 @@ export interface UserProfile extends AppwriteDocument {
     activityLevel?: string;
     /** Preferred AI chat tone (e.g., 'empathetic', 'direct') */
     chatTonePreference?: string;
+    languagePreference?: string;
 }
 
 /**

@@ -14,7 +14,8 @@ import {
   LayoutDashboard,
   Settings, // Example icon for profile
   FileText, // Example icon for documents
-  Gamepad2, // Games icon
+  Gamepad2,
+  ListCheck, // Games icon
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast'; // Corrected import path assuming hooks dir
@@ -55,7 +56,9 @@ const navItems: NavItem[] = [
   { path: '/dashboard', label: 'Dashboard', requiresAuth: true },
   { path: '/profile', label: 'Profile', requiresAuth: true, isMobileOnly: true }, // Show Profile in mobile nav too
   { path: '/medicaldocs', label: 'Documents', requiresAuth: true, isMobileOnly: true }, // Show Docs in mobile nav too
+  { path: '/schecker', label: 'Symptom Checker', requiresAuth: true, isMobileOnly: true },
   { path: '/games', label: 'Games', requiresAuth: true, isMobileOnly: true }, // Show Games in mobile nav too
+  { path: '/milestones', label: 'NFT Milestones', requiresAuth: true, isMobileOnly: true },
 
   // --- Links shown REGARDLESS of auth status ---
   { path: '/emergency', label: 'Emergency', requiresAuth: false },
@@ -221,6 +224,14 @@ const Navbar: React.FC = () => {
                   <DropdownMenuItem onClick={() => navigate('/medicaldocs')}>
                     <FileText className="mr-2 h-4 w-4" />
                     <span>Medical Documents</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/schecker')}>
+                    <Heart className="mr-2 h-4 w-4" />
+                    <span>Symptom Checker</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/milestones')}>
+                    <ListCheck className="mr-2 h-4 w-4" />
+                    <span>NFT Milestones</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/games')}>
                     <Gamepad2 className="mr-2 h-4 w-4" />

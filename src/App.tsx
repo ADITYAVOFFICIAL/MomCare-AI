@@ -37,6 +37,8 @@ const GamesPage = lazy(() => import("./pages/GamesPage"));
 const DoctorPage = lazy(() => import("./pages/DoctorPage"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
+const SymPage = lazy(() => import("./pages/SymptomCheckerPage"));
+const MonadPage = lazy(() => import("./pages/MonadPage"));
 
 // You might want a more sophisticated loading component
 const LoadingFallback = () => (
@@ -87,7 +89,9 @@ const App = () => {
               <Route path="/games" element={<PrivateRoute><GamesPage /></PrivateRoute>} />
               <Route path="/doctor" element={<PrivateRoute><DoctorPage /></PrivateRoute>} />
               <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+              <Route path="/schecker" element={<PrivateRoute><SymPage /></PrivateRoute>} />
               <Route path="/resources" element={<PrivateRoute><ResourcesPage /></PrivateRoute>} />
+              <Route path="/milestones" element={<PrivateRoute><MonadPage /></PrivateRoute>} />
               <Route path="/blog/:slug" element={<PrivateRoute><BlogPostPage /></PrivateRoute>} />
               <Route path="/edit-blog/:slug" element={<PrivateRoute><EditBlogPage /></PrivateRoute>} />
               {/* Forum routes need care - ensure ForumPage handles both base and topicId */}

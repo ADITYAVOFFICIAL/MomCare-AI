@@ -63,6 +63,7 @@ export const appwriteSchemaConfig = {
         { key: 'dietaryPreferences', type: 'string', required: false, size: 100, array: true, description: 'List of dietary needs/prefs (e.g., vegetarian)' },
         { key: 'activityLevel', type: 'string', required: false, size: 50, array: false, description: 'e.g., sedentary, light, moderate, active' },
         { key: 'chatTonePreference', type: 'string', required: false, size: 50, array: false, description: 'Preferred AI chat tone (e.g., empathetic, direct)' },
+        { key: 'languagePreference', type: 'string', required: false, size: 10, array: false, default: 'en', description: 'User preferred language code (e.g., en, hi, es)' },
       ],
       indexes: [
         { key: 'userId_unique', type: 'unique', attributes: ['userId'], orders: ['ASC'], description: 'Ensure only one profile per user' },
