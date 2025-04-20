@@ -24,6 +24,7 @@ import {
   Loader2,
   AlertCircle,
   Tag,
+  BadgeCheck,
 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import Hero from '@/components/home/Hero';
@@ -251,6 +252,33 @@ const HomePage = () => {
               </p>
               <Link to="/games" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-cyan-500 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300">
                 Play the game <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+            {/* Symptom Checker */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-yellow-500 dark:border-yellow-600">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-yellow-500 dark:bg-yellow-600 text-white mb-4">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Symptom Checker (Beta)</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
+                Get general information about common pregnancy symptoms. (Not a substitute for medical advice).
+              </p>
+              <Link to="/schecker" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-yellow-500 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300">
+                Check symptoms <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* Monad Milestones */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md transition-all hover:shadow-lg border-t-4 border-purple-500 dark:border-purple-600">
+              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 dark:bg-purple-600 text-white mb-4">
+                <BadgeCheck className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Monad Milestones (Mock)</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
+              Celebrate your journey by minting NFT badges for key milestones on the Monad Testnet (currently mocked).
+              </p>
+              <Link to="/milestones" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-purple-500 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
+                View milestones <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </div>
 
