@@ -72,9 +72,9 @@ In essence, MomCare AI consolidates essential pregnancy tools and enhances them 
 - **Hosting:** [Vercel](https://vercel.com/)
 
 ### Sponsor Technologies Used:
-- [✅] **Groq:** Powers the multi-modal AI chat assistant (Q&A + OCR/transcription via [`src/lib/groq.ts`](src/lib/groq.ts)), content formatting ([`src/lib/groqf.ts`](src/lib/groqf.ts)), forum content moderation ([`src/lib/groqMod.ts`](src/lib/groqMod.ts)), and personalized generation of meals/exercises/products ([`src/lib/groqMeal.ts`](src/lib/groqMeal.ts), [`src/lib/groqProduct.ts`](src/lib/groqProduct.ts)).
+- [✅] **Groq:** Powers the multi-modal AI chat assistant (Q&A + OCR/transcription via [`src/lib/groq.ts`](src/lib/groq.ts)), content formatting ([`src/lib/groqf.ts`](src/lib/groqf.ts)),symptop checker ([`src/lib/groqSym.ts`](src/lib/groqSym.ts)), forum content moderation ([`src/lib/groqMod.ts`](src/lib/groqMod.ts)), and personalized generation of meals/exercises/products ([`src/lib/groqMeal.ts`](src/lib/groqMeal.ts), [`src/lib/groqProduct.ts`](src/lib/groqProduct.ts)).
     - **Impact:** Enables fast, versatile AI features central to the platform's intelligence and responsive user interaction.
-- [✅] **Monad:** Used for the blockchain stacking game leaderboard. Deployed `StackTheBox.sol` (Solidity contract) to the **Monad Testnet**. Frontend interaction via Ethers.js from [`src/pages/GamesPage.tsx`](src/pages/GamesPage.tsx).
+- [✅] **Monad:** Used for the blockchain stacking game leaderboard. Deployed `StackTheBox.sol` (Solidity contract) to the **Monad Testnet**. Frontend interaction via Ethers.js from [`src/pages/GamesPage.tsx`](src/pages/GamesPage.tsx) and NFT Milestones contract on **Monad Testnet**. Interaction via Ethers.js from [`src/pages/MonadPage.tsx`](src/pages/MonadPage.tsx).
     - **Impact:** Demonstrates seamless integration of EVM-compatible blockchain for novel engagement features, showcasing potential for scalable Web3 additions on a performant network.
 - [✅] **Fluvio/InfinyOn:** Enables real-time forum updates. Appwrite Functions ([`produceForumPostEvent`](appwrite-functions/produceForumPostEvent/), [`produceForumVoteEvent`](appwrite-functions/produceForumVoteEvent/)) act as producers sending events to **InfinyOn Cloud topics**. A separate backend service ([`momcare-backend`](momcare-backend/)) consumes these topics and broadcasts updates via WebSockets.
     - **Impact:** Powers real-time features, creating a dynamic and engaging community experience distinct from static forums.
@@ -95,7 +95,9 @@ In essence, MomCare AI consolidates essential pregnancy tools and enhances them 
 - ✅ **Emergency Information:** Quick access to warning signs and nearby hospitals (Google Maps).
 - ✅ **AI Meal & Exercise Ideas (Groq):** Personalized, safe suggestions based on user profile.
 - ✅ **AI Product Suggestions (Groq):** Recommends relevant products with bookmarking.
+- ✅ **Symptom Checker (Groq):** AI-powered analysis of symptoms based on user input.
 - ✅ **Blockchain Game (Monad):** Fun stacking game (potential stress-relief/engagement tool) with high scores submitted to a Monad blockchain leaderboard.
+- ✅ **NFT Milestones (Monad):** Mint unique NFT badges for achieving key milestones (frontend interaction mocked).
 - ✅ **User Authentication & Profile (Appwrite):** Secure login/signup and profile management.
 - ✅ **Health Tracking:** Log and visualize Blood Pressure, Blood Sugar, and Weight readings.
 - ✅ **Medication Reminders:** Create and manage medication schedules.
