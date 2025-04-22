@@ -261,7 +261,7 @@ Most backend functionality (Auth, DB, Storage) is handled by Appwrite Cloud, but
 
 ## Star History
 
-<a href="https://www.star-history.com/#ADITYAVOFFICIAL/MomCare-AI&Date">
+<a href="https://github.com/ADITYAVOFFICIAL/MomCare-AI">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ADITYAVOFFICIAL/MomCare-AI&type=Date&theme=dark" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ADITYAVOFFICIAL/MomCare-AI&type=Date" />
