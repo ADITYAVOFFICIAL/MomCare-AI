@@ -1,152 +1,169 @@
 // src/components/doctor/DoctorAppointmentsCard.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { format, parseISO, isPast } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { getAllUpcomingAppointments, getUserProfilesByIds, Appointment, UserProfile } from '@/lib/appwrite';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, CalendarDays, User, Inbox, AlertTriangle, Clock } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { CalendarCheck, Loader2, AlertTriangle, RefreshCw, UserCircle, Clock, Info } from 'lucide-react';
+import {
+    getAllUpcomingAppointments,
+    getUserProfilesByIds,
+    Appointment,
+    UserProfile,
+} from '@/lib/appwrite';
 
 const DoctorAppointmentsCard: React.FC = () => {
-    const [appointments, setAppointments] = useState<Appointment[]>([]);
-    const [patientProfiles, setPatientProfiles] = useState<Map<string, UserProfile>>(new Map());
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const { toast } = useToast();
 
-    const fetchAppointmentsAndProfiles = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            // Fetch all upcoming appointments (adjust limit as needed)
-            // WARNING: Fetches ALL appointments. Needs filtering by doctorId in production.
-            const fetchedAppointments = await getAllUpcomingAppointments(20);
-            setAppointments(fetchedAppointments);
+    // 1. Fetch all upcoming appointments
+    const {
+        data: appointmentsData,
+        isLoading: isLoadingAppointments,
+        isError: isErrorAppointments,
+        error: appointmentsError,
+        refetch: refetchAppointments,
+    } = useQuery<Appointment[], Error>({
+        queryKey: ['allUpcomingAppointments'],
+        queryFn: () => getAllUpcomingAppointments(50), // Fetch up to 50 appointments
+    });
 
-            if (fetchedAppointments.length > 0) {
-                // Get unique patient IDs from the fetched appointments
-                const patientIds = [...new Set(fetchedAppointments.map(app => app.userId))];
+    // 2. Extract unique user IDs from fetched appointments
+    const patientUserIds = useMemo(() => {
+        if (!appointmentsData) return [];
+        const ids = appointmentsData.map(app => app.userId);
+        return [...new Set(ids)]; // Deduplicate
+    }, [appointmentsData]);
 
-                // Fetch corresponding patient profiles
-                const profilesMap = await getUserProfilesByIds(patientIds);
-                setPatientProfiles(profilesMap);
-            } else {
-                setPatientProfiles(new Map()); // Clear profiles if no appointments
-            }
+    // 3. Fetch profiles for the users who have appointments
+    const {
+        data: patientProfilesMap,
+        isLoading: isLoadingProfiles,
+        isError: isErrorProfiles,
+        error: profilesError,
+    } = useQuery<Map<string, UserProfile>, Error>({
+        queryKey: ['patientProfilesForAppointments', patientUserIds],
+        queryFn: () => getUserProfilesByIds(patientUserIds),
+        enabled: !!patientUserIds && patientUserIds.length > 0, // Only run if there are user IDs
+    });
 
-        } catch (err: any) {
-            const errorMessage = err.message || "Failed to load upcoming appointments.";
-            setError(errorMessage);
-            toast({ title: "Loading Error", description: errorMessage, variant: "destructive" });
-            setAppointments([]);
-            setPatientProfiles(new Map());
-        } finally {
-            setIsLoading(false);
-        }
-    }, [toast]);
+    // Combine loading states
+    const isLoading = isLoadingAppointments || (patientUserIds.length > 0 && isLoadingProfiles);
+    // Combine error states/messages
+    const isError = isErrorAppointments || (patientUserIds.length > 0 && isErrorProfiles);
+    const errorMessage = appointmentsError?.message || profilesError?.message || "An error occurred.";
 
-    useEffect(() => {
-        fetchAppointmentsAndProfiles();
-    }, [fetchAppointmentsAndProfiles]);
-
-    // Helper to format date and time nicely
-    const formatApptDateTime = (dateStr: string | undefined, timeStr: string | undefined): string => {
-         if (!dateStr || !timeStr) return "Invalid date/time";
-        try {
-            // Assuming dateStr is YYYY-MM-DD and timeStr is HH:MM AM/PM or HH:MM
-            const date = parseISO(dateStr); // This handles YYYY-MM-DD correctly
-            // Combine for accurate formatting if needed, otherwise just display as is
-             return `${format(date, 'EEE, MMM d, yyyy')} at ${timeStr}`;
-        } catch {
-            return `${dateStr} at ${timeStr}`; // Fallback
-        }
+    const handleRefresh = () => {
+        refetchAppointments();
+        // Profiles will refetch automatically if user IDs change or query becomes enabled
     };
 
-    // Helper to get appointment type label
-    const getAppointmentTypeLabel = (type: string | undefined): string => {
-         switch (type?.toLowerCase()) {
-             case 'doctor': return 'Doctor Visit';
-             case 'lab_test': return 'Lab Test';
-             case 'yoga_class': return 'Yoga Class';
-             case 'childbirth_class': return 'Childbirth Class';
-             case 'fitness_class': return 'Fitness Class';
-             default: return type || 'General';
-         }
-    };
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="flex items-start space-x-3 p-3 border dark:border-gray-700 rounded-md">
+                            <Skeleton className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 mt-1" />
+                            <div className="space-y-1.5 flex-grow">
+                                <Skeleton className="h-4 w-3/5 bg-gray-200 dark:bg-gray-700" />
+                                <Skeleton className="h-3 w-4/5 bg-gray-200 dark:bg-gray-700" />
+                                <Skeleton className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
 
+        if (isError) {
+            return (
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error Loading Appointments</AlertTitle>
+                    <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+            );
+        }
+
+        if (!appointmentsData || appointmentsData.length === 0) {
+            return <p className="text-sm text-center text-gray-500 dark:text-gray-400 py-6">No upcoming appointments found.</p>;
+        }
+
+        // Sort appointments just in case API didn't sort perfectly
+        const sortedAppointments = [...appointmentsData].sort((a, b) =>
+            parseISO(a.date).getTime() - parseISO(b.date).getTime()
+        );
+
+        return (
+            <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                {sortedAppointments.map((appointment) => {
+                    const patientProfile = patientProfilesMap?.get(appointment.userId);
+                    const appointmentDate = parseISO(appointment.date);
+                    const isAppointmentPast = isPast(appointmentDate);
+
+                    return (
+                        <li key={appointment.$id} className={`flex items-start space-x-3 p-3 border dark:border-gray-700 rounded-md bg-white dark:bg-gray-800/50 ${isAppointmentPast ? 'opacity-60' : ''}`}>
+                            {patientProfile?.profilePhotoUrl ? (
+                                <img src={patientProfile.profilePhotoUrl} alt={patientProfile.name || 'Patient'} className="h-10 w-10 rounded-full object-cover flex-shrink-0 mt-1" />
+                             ) : (
+                                <UserCircle className="h-10 w-10 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1" />
+                             )}
+                            <div className="flex-grow overflow-hidden">
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                                    {patientProfile?.name || `User ID: ${appointment.userId.substring(0, 6)}...`}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                    <CalendarCheck className="h-3 w-3 flex-shrink-0" />
+                                    {format(appointmentDate, 'eee, MMM d, yyyy')}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                    <Clock className="h-3 w-3 flex-shrink-0" />
+                                    {format(appointmentDate, 'h:mm a')} {/* Display time */}
+                                    {isAppointmentPast && <Badge variant="outline" className="ml-2 text-xs px-1 py-0">Past</Badge>}
+                                </p>
+                                {appointment.appointmentType && (
+                                    <Badge variant="secondary" className="mt-1 text-xs px-1.5 py-0.5">
+                                        {appointment.appointmentType}
+                                    </Badge>
+                                )}
+                                {/* Link to patient detail */}
+                                <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs mt-1 text-momcare-primary dark:text-momcare-accent">
+                                     <Link to={`/doctor/patient/${appointment.userId}`}>View Patient</Link>
+                                </Button>
+                            </div>
+                        </li>
+                    );
+                })}
+            </ul>
+        );
+    };
 
     return (
-        <Card className="shadow-md border border-gray-200 h-full flex flex-col">
-            <CardHeader>
-                <CardTitle className="flex items-center text-xl text-momcare-primary">
-                    <CalendarDays className="mr-2 h-5 w-5" />
-                    Upcoming Appointments
-                </CardTitle>
-                <CardDescription>Overview of scheduled patient visits.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow flex flex-col">
-                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-3">
-                    Note: Currently showing all upcoming appointments. Needs filtering by doctor in a full setup.
-                 </p>
-                <div className="flex-grow overflow-y-auto space-y-3 pr-1">
-                    {isLoading && (
-                        <>
-                            <Skeleton className="h-16 w-full" />
-                            <Skeleton className="h-16 w-full" />
-                            <Skeleton className="h-16 w-5/6" />
-                        </>
-                    )}
-                    {!isLoading && error && (
-                         <div className="flex flex-col items-center justify-center text-center py-6 text-red-600">
-                            <AlertTriangle className="h-8 w-8 mb-2" />
-                            <p className="font-semibold">Error loading appointments</p>
-                            <p className="text-xs">{error}</p>
-                         </div>
-                    )}
-                    {!isLoading && !error && appointments.length === 0 && (
-                        <div className="flex flex-col items-center justify-center text-center py-6 text-gray-500">
-                           <Inbox className="h-8 w-8 mb-2" />
-                           <p>No upcoming appointments found.</p>
-                        </div>
-                    )}
-                    {!isLoading && !error && appointments.length > 0 && (
-                        <ul className="divide-y divide-gray-100">
-                            {appointments.map((app) => {
-                                const patient = patientProfiles.get(app.userId);
-                                return (
-                                    <li key={app.$id} className="py-3 px-1">
-                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                                            <div className="flex-grow min-w-0">
-                                                <p className="text-sm font-medium text-gray-900 flex items-center">
-                                                     <User className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                                                    {patient?.name || `Patient (${app.userId.substring(0, 6)}...)`}
-                                                </p>
-                                                <p className="text-xs text-gray-600 flex items-center mt-0.5">
-                                                    <Clock className="h-3 w-3 mr-1.5 text-gray-400" />
-                                                    {formatApptDateTime(app.date, app.time)}
-                                                </p>
-                                                {app.notes && <p className="text-xs text-gray-500 mt-1 italic line-clamp-1">Notes: {app.notes}</p>}
-                                            </div>
-                                            <div className="flex-shrink-0 mt-1 sm:mt-0">
-                                                <Badge variant="secondary" className="text-xs font-normal bg-blue-50 text-blue-700 border-blue-200">
-                                                     {getAppointmentTypeLabel(app.appointmentType)}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                        {/* Add View Details Button if needed */}
-                                         {/* <Button variant="ghost" size="sm" className="mt-1 text-xs h-auto py-0.5 px-1.5" disabled>View Details</Button> */}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
+        <Card className="shadow-md border dark:border-gray-700">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                    <CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-800 dark:text-gray-200">
+                        <CalendarCheck className="h-5 w-5 text-momcare-secondary" />
+                        Upcoming Appointments
+                    </CardTitle>
+                    <CardDescription>Overview of scheduled patient visits.</CardDescription>
                 </div>
-                 <Button variant="outline" size="sm" className="mt-4 w-full" disabled>
-                     View Full Schedule (Coming Soon)
+                 <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isLoading} aria-label="Refresh appointments">
+                     <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                  </Button>
+            </CardHeader>
+            <CardContent>
+                 <Alert variant="default" className="mb-4 text-xs bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700/50 dark:text-blue-300">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Note</AlertTitle>
+                    <AlertDescription>
+                        Showing all upcoming appointments system-wide. Future versions may filter by assigned doctor.
+                    </AlertDescription>
+                </Alert>
+                {renderContent()}
             </CardContent>
         </Card>
     );

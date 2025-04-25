@@ -39,6 +39,7 @@ const PricingPage = lazy(() => import("./pages/PricingPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const SymPage = lazy(() => import("./pages/SymptomCheckerPage"));
 const MonadPage = lazy(() => import("./pages/MonadPage"));
+const PatientDetailPage = lazy(() => import("./pages/doctor/PatientDetailPage"));
 
 // You might want a more sophisticated loading component
 const LoadingFallback = () => (
@@ -47,7 +48,15 @@ const LoadingFallback = () => (
   </div>
 );
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+      queries: {
+          staleTime: 1000 * 60 * 5, // 5 minutes
+          refetchOnWindowFocus: false,
+          retry: 1,
+      },
+  },
+});
 
 const App = () => {
   const { checkAuth } = useAuthStore();
@@ -94,7 +103,7 @@ const App = () => {
               <Route path="/milestones" element={<PrivateRoute><MonadPage /></PrivateRoute>} />
               <Route path="/blog/:slug" element={<PrivateRoute><BlogPostPage /></PrivateRoute>} />
               <Route path="/edit-blog/:slug" element={<PrivateRoute><EditBlogPage /></PrivateRoute>} />
-              {/* Forum routes need care - ensure ForumPage handles both base and topicId */}
+              <Route path="/doctor/patient/:userId" element={<PrivateRoute requiredRole="doctor"><PatientDetailPage /></PrivateRoute>} />
               <Route path="/forum" element={<PrivateRoute><ForumPage /></PrivateRoute>} />
               <Route path="/forum/:topicId" element={<PrivateRoute><ForumPage /></PrivateRoute>} />
 

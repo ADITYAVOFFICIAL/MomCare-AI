@@ -273,9 +273,9 @@ const HomePage = () => {
               <div className="flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 dark:bg-purple-600 text-white mb-4">
                 <BadgeCheck className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Monad Milestones (Mock)</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Monad Milestones</h3>
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
-              Celebrate your journey by minting NFT badges for key milestones on the Monad Testnet (currently mocked).
+              Celebrate your journey by minting NFT badges for key milestones on the Monad Testnet.
               </p>
               <Link to="/milestones" onClick={() => window.scrollTo(0, 0)} className="mt-4 inline-flex items-center text-sm font-medium text-purple-500 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
                 View milestones <ArrowRight className="ml-1 h-4 w-4" />

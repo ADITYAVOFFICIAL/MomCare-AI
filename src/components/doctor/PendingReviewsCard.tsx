@@ -1,174 +1,211 @@
 // src/components/doctor/PendingReviewsCard.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { formatDistanceToNow, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { getAllRecentMedicalDocuments, getUserProfilesByIds, getFilePreview, MedicalDocument, UserProfile, medicalBucketId } from '@/lib/appwrite'; // Import medicalBucketId
+import { FileText, Loader2, AlertTriangle, RefreshCw, UserCircle, Download, Info } from 'lucide-react';
+import {
+    getAllRecentMedicalDocuments,
+    getUserProfilesByIds,
+    getFilePreview, // Import getFilePreview
+    medicalBucketId, // Import bucket ID
+    MedicalDocument,
+    UserProfile,
+} from '@/lib/appwrite';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, FileText, User, Inbox, AlertTriangle, Download, CheckSquare } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
 
 const PendingReviewsCard: React.FC = () => {
-    const [documents, setDocuments] = useState<MedicalDocument[]>([]);
-    const [patientProfiles, setPatientProfiles] = useState<Map<string, UserProfile>>(new Map());
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
 
-    const fetchDocumentsAndProfiles = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            // Fetch all recent documents (adjust limit as needed)
-            // WARNING: Fetches ALL recent docs. Needs filtering by status/doctor in production.
-            const fetchedDocs = await getAllRecentMedicalDocuments(20);
-            setDocuments(fetchedDocs);
+    // 1. Fetch all recent medical documents
+    const {
+        data: documentsData,
+        isLoading: isLoadingDocuments,
+        isError: isErrorDocuments,
+        error: documentsError,
+        refetch: refetchDocuments,
+    } = useQuery<MedicalDocument[], Error>({
+        queryKey: ['allRecentMedicalDocuments'],
+        queryFn: () => getAllRecentMedicalDocuments(50), // Fetch up to 50 documents
+    });
 
-            if (fetchedDocs.length > 0) {
-                // Get unique patient IDs
-                const patientIds = [...new Set(fetchedDocs.map(doc => doc.userId))];
-                // Fetch corresponding patient profiles
-                const profilesMap = await getUserProfilesByIds(patientIds);
-                setPatientProfiles(profilesMap);
-            } else {
-                setPatientProfiles(new Map()); // Clear if no docs
-            }
+    // 2. Extract unique user IDs from fetched documents
+    const patientUserIds = useMemo(() => {
+        if (!documentsData) return [];
+        const ids = documentsData.map(doc => doc.userId);
+        return [...new Set(ids)]; // Deduplicate
+    }, [documentsData]);
 
-        } catch (err: any) {
-            const errorMessage = err.message || "Failed to load medical documents.";
-            setError(errorMessage);
-            toast({ title: "Loading Error", description: errorMessage, variant: "destructive" });
-            setDocuments([]);
-            setPatientProfiles(new Map());
-        } finally {
-            setIsLoading(false);
-        }
-    }, [toast]);
+    // 3. Fetch profiles for the users who uploaded documents
+    const {
+        data: patientProfilesMap,
+        isLoading: isLoadingProfiles,
+        isError: isErrorProfiles,
+        error: profilesError,
+    } = useQuery<Map<string, UserProfile>, Error>({
+        queryKey: ['patientProfilesForDocuments', patientUserIds],
+        queryFn: () => getUserProfilesByIds(patientUserIds),
+        enabled: !!patientUserIds && patientUserIds.length > 0, // Only run if there are user IDs
+    });
 
-    useEffect(() => {
-        fetchDocumentsAndProfiles();
-    }, [fetchDocumentsAndProfiles]);
+    // Combine loading states
+    const isLoading = isLoadingDocuments || (patientUserIds.length > 0 && isLoadingProfiles);
+    // Combine error states/messages
+    const isError = isErrorDocuments || (patientUserIds.length > 0 && isErrorProfiles);
+    const errorMessage = documentsError?.message || profilesError?.message || "An error occurred.";
 
-    // Helper to format date
-     const formatDate = (dateString: string | undefined): string => {
-        if (!dateString) return 'Unknown date';
-        try {
-            return format(parseISO(dateString), 'MMM d, yyyy, p'); // Include time
-        } catch { return 'Invalid date'; }
-     };
+    const handleRefresh = () => {
+        refetchDocuments();
+        // Profiles will refetch automatically if user IDs change or query becomes enabled
+    };
 
-    // Function to get file URL (ensure medicalBucketId is exported from appwrite.ts)
-    const getDocumentUrl = (fileId: string) => {
+    // Function to handle document download/view
+    const handleViewDocument = (fileId: string, fileName: string) => {
         if (!medicalBucketId) {
-            // console.error("Medical Bucket ID not configured for file preview.");
-            return '#';
+            toast({ title: "Configuration Error", description: "Medical document storage is not configured.", variant: "destructive" });
+            return;
         }
         try {
-            const url = getFilePreview(fileId, medicalBucketId); // Using getFileView
-            return url?.href || '#';
-        } catch (e) {
-            // console.error("Error generating file preview URL:", e);
-            return '#';
+            const fileUrl = getFilePreview(fileId, medicalBucketId);
+            if (fileUrl) {
+                // Open in new tab
+                window.open(fileUrl.href, '_blank', 'noopener,noreferrer');
+                // Optional: Trigger download (might be blocked by browser)
+                // const link = document.createElement('a');
+                // link.href = fileUrl.href;
+                // link.setAttribute('download', fileName); // Suggest filename
+                // document.body.appendChild(link);
+                // link.click();
+                // document.body.removeChild(link);
+            } else {
+                toast({ title: "Error", description: "Could not generate link for this document.", variant: "destructive" });
+            }
+        } catch (error: any) {
+            // console.error("Error getting file preview:", error);
+            toast({ title: "Error", description: `Failed to get document link: ${error.message}`, variant: "destructive" });
         }
     };
 
-     // Placeholder action
-    const handleMarkReviewed = (docId: string) => {
-         toast({ title: "Action Required", description: `Implement logic to mark document ${docId.substring(0,6)}... as reviewed.` });
-         // In a real app: call an Appwrite function or update the document status
-    };
 
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="flex items-start justify-between space-x-3 p-3 border dark:border-gray-700 rounded-md">
+                            <div className="flex items-start space-x-3 flex-grow overflow-hidden">
+                                <Skeleton className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 mt-1" />
+                                <div className="space-y-1.5 flex-grow">
+                                    <Skeleton className="h-4 w-4/5 bg-gray-200 dark:bg-gray-700" />
+                                    <Skeleton className="h-3 w-3/5 bg-gray-200 dark:bg-gray-700" />
+                                    <Skeleton className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700" />
+                                </div>
+                            </div>
+                             <Skeleton className="h-8 w-20 bg-gray-300 dark:bg-gray-600 rounded flex-shrink-0" />
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        if (isError) {
+            return (
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error Loading Documents</AlertTitle>
+                    <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+            );
+        }
+
+        if (!documentsData || documentsData.length === 0) {
+            return <p className="text-sm text-center text-gray-500 dark:text-gray-400 py-6">No recent documents found.</p>;
+        }
+
+        // Sort documents by creation date (descending)
+        const sortedDocuments = [...documentsData].sort((a, b) =>
+            parseISO(b.$createdAt).getTime() - parseISO(a.$createdAt).getTime()
+        );
+
+        return (
+            <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                {sortedDocuments.map((doc) => {
+                    const patientProfile = patientProfilesMap?.get(doc.userId);
+                    const uploadedDate = parseISO(doc.$createdAt);
+
+                    return (
+                        <li key={doc.$id} className="flex items-start justify-between space-x-3 p-3 border dark:border-gray-700 rounded-md bg-white dark:bg-gray-800/50">
+                           <div className="flex items-start space-x-3 flex-grow overflow-hidden">
+                                {patientProfile?.profilePhotoUrl ? (
+                                    <img src={patientProfile.profilePhotoUrl} alt={patientProfile.name || 'Patient'} className="h-10 w-10 rounded-full object-cover flex-shrink-0 mt-1" />
+                                ) : (
+                                    <UserCircle className="h-10 w-10 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1" />
+                                )}
+                                <div className="flex-grow overflow-hidden">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" title={doc.fileName}>
+                                        {doc.fileName || 'Untitled Document'}
+                                    </p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                        Patient: {patientProfile?.name || `User ID: ${doc.userId.substring(0, 6)}...`}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                                        Uploaded: {formatDistanceToNow(uploadedDate, { addSuffix: true })}
+                                    </p>
+                                    {doc.documentType && (
+                                        <Badge variant="outline" className="mt-1 text-xs px-1.5 py-0.5">
+                                            {doc.documentType.split('/')[1] || doc.documentType} {/* Show subtype or full type */}
+                                        </Badge>
+                                    )}
+                                    {/* Link to patient detail */}
+                                    <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs mt-1 mr-2 text-momcare-primary dark:text-momcare-accent">
+                                        <Link to={`/doctor/patient/${doc.userId}`}>View Patient</Link>
+                                    </Button>
+                                </div>
+                            </div>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleViewDocument(doc.fileId, doc.fileName)}
+                                className="flex-shrink-0"
+                                aria-label={`View document ${doc.fileName}`}
+                            >
+                                <Download className="h-3.5 w-3.5 mr-1" /> View
+                            </Button>
+                        </li>
+                    );
+                })}
+            </ul>
+        );
+    };
 
     return (
-        <Card className="shadow-md border border-gray-200 h-full flex flex-col">
-            <CardHeader>
-                <CardTitle className="flex items-center text-xl text-momcare-primary">
-                    <FileText className="mr-2 h-5 w-5" />
-                    Medical Document Queue
-                </CardTitle>
-                <CardDescription>Recently uploaded documents for review.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow flex flex-col">
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-3">
-                    Note: Currently showing all recent documents. Needs filtering by review status in a full setup.
-                 </p>
-                <div className="flex-grow overflow-y-auto space-y-3 pr-1">
-                    {isLoading && (
-                        <>
-                            <Skeleton className="h-12 w-full" />
-                            <Skeleton className="h-12 w-full" />
-                            <Skeleton className="h-12 w-5/6" />
-                        </>
-                    )}
-                    {!isLoading && error && (
-                        <div className="flex flex-col items-center justify-center text-center py-6 text-red-600">
-                            <AlertTriangle className="h-8 w-8 mb-2" />
-                            <p className="font-semibold">Error loading documents</p>
-                            <p className="text-xs">{error}</p>
-                         </div>
-                    )}
-                    {!isLoading && !error && documents.length === 0 && (
-                         <div className="flex flex-col items-center justify-center text-center py-6 text-gray-500">
-                           <Inbox className="h-8 w-8 mb-2" />
-                           <p>No recent documents found.</p>
-                        </div>
-                    )}
-                    {!isLoading && !error && documents.length > 0 && (
-                         <ul className="divide-y divide-gray-100">
-                            {documents.map((doc) => {
-                                const patient = patientProfiles.get(doc.userId);
-                                const fileUrl = getDocumentUrl(doc.fileId);
-                                return (
-                                    <li key={doc.$id} className="py-3 px-1">
-                                        <div className="flex items-start justify-between gap-3">
-                                             <div className="flex-grow min-w-0">
-                                                 <p className="text-sm font-medium text-gray-800 truncate flex items-center">
-                                                    <FileText className="h-3.5 w-3.5 mr-1.5 text-gray-400 flex-shrink-0" />
-                                                    {doc.fileName}
-                                                 </p>
-                                                 <p className="text-xs text-gray-500 mt-0.5">
-                                                     Patient: {patient?.name || `ID ${doc.userId.substring(0, 6)}...`}
-                                                 </p>
-                                                 <p className="text-xs text-gray-500">
-                                                     Uploaded: {formatDate(doc.$createdAt)}
-                                                 </p>
-                                                 {doc.description && <p className="text-xs text-gray-500 mt-1 italic line-clamp-1">Desc: {doc.description}</p>}
-                                             </div>
-                                             <div className="flex-shrink-0 flex flex-col sm:flex-row items-end sm:items-center gap-1.5 mt-1">
-                                                 <Button
-                                                     asChild
-                                                     variant="outline"
-                                                     size="sm"
-                                                     className="h-7 px-2 text-xs"
-                                                     disabled={fileUrl === '#'}
-                                                     title={fileUrl === '#' ? "Cannot get file URL" : "Download/View Document"}
-                                                 >
-                                                     <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-                                                         <Download className="h-3 w-3 mr-1" /> View
-                                                     </a>
-                                                 </Button>
-                                                  <Button
-                                                     variant="ghost"
-                                                     size="sm"
-                                                     className="h-7 px-2 text-xs text-green-700 hover:bg-green-100"
-                                                     onClick={() => handleMarkReviewed(doc.$id)}
-                                                     title="Mark as Reviewed (Placeholder)"
-                                                 >
-                                                      <CheckSquare className="h-3 w-3 mr-1" /> Review
-                                                  </Button>
-                                             </div>
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    )}
-                </div>
-                 <Button variant="outline" size="sm" className="mt-4 w-full" disabled>
-                     Go to Full Review Queue (Coming Soon)
+        <Card className="shadow-md border dark:border-gray-700">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                 <div>
+                    <CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-800 dark:text-gray-200">
+                        <FileText className="h-5 w-5 text-momcare-accent" />
+                        Recent Documents
+                    </CardTitle>
+                    <CardDescription>Recently uploaded patient medical documents.</CardDescription>
+                 </div>
+                 <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isLoading} aria-label="Refresh documents">
+                     <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                  </Button>
+            </CardHeader>
+            <CardContent>
+                 <Alert variant="default" className="mb-4 text-xs bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:border-blue-700/50 dark:text-blue-300">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Note</AlertTitle>
+                    <AlertDescription>
+                        Showing all recent documents system-wide. Future versions may filter by review status or assigned patients.
+                    </AlertDescription>
+                </Alert>
+                {renderContent()}
             </CardContent>
         </Card>
     );

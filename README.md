@@ -97,7 +97,7 @@ In essence, MomCare AI consolidates essential pregnancy tools and enhances them 
 - ✅ **AI Product Suggestions (Groq):** Recommends relevant products with bookmarking.
 - ✅ **Symptom Checker (Groq):** AI-powered analysis of symptoms based on user input.
 - ✅ **Blockchain Game (Monad):** Fun stacking game (potential stress-relief/engagement tool) with high scores submitted to a Monad blockchain leaderboard.
-- ✅ **NFT Milestones (Monad):** Mint unique NFT badges for achieving key milestones (frontend interaction mocked).
+- ✅ **NFT Milestones (Monad):** Mint unique NFT badges for achieving key milestones.
 - ✅ **User Authentication & Profile (Appwrite):** Secure login/signup and profile management.
 - ✅ **Health Tracking:** Log and visualize Blood Pressure, Blood Sugar, and Weight readings.
 - ✅ **Medication Reminders:** Create and manage medication schedules.

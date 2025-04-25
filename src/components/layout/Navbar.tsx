@@ -53,7 +53,7 @@ const navItems: NavItem[] = [
   { path: '/forum', label: 'Forum', requiresAuth: true },
   { path: '/meals', label: 'Meals & Exercises', requiresAuth: true },
   { path: '/products', label: 'Products', requiresAuth: true },
-  { path: '/dashboard', label: 'Dashboard', requiresAuth: true },
+  
   { path: '/profile', label: 'Profile', requiresAuth: true, isMobileOnly: true }, // Show Profile in mobile nav too
   { path: '/medicaldocs', label: 'Documents', requiresAuth: true, isMobileOnly: true }, // Show Docs in mobile nav too
   { path: '/schecker', label: 'Symptom Checker', requiresAuth: true, isMobileOnly: true },
@@ -61,8 +61,9 @@ const navItems: NavItem[] = [
   { path: '/milestones', label: 'NFT Milestones', requiresAuth: true, isMobileOnly: true },
 
   // --- Links shown REGARDLESS of auth status ---
+  { path: '/resources', label: 'Resources', requiresAuth: true },
   { path: '/emergency', label: 'Emergency', requiresAuth: false },
-  { path: '/resources', label: 'Resources', requiresAuth: false }, // Resources might be public or private, adjust requiresAuth if needed
+  { path: '/dashboard', label: 'Dashboard', requiresAuth: true },
 ];
 
 const Navbar: React.FC = () => {

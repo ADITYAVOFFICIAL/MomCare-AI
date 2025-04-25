@@ -1776,5 +1776,56 @@ export const getTotalUserCount = async (): Promise<{ totalUsers: number }> => {
         }
     }
 };
+/**
+ * Fetches the most recently updated user profiles.
+ * Requires collection-level read permission for the caller on the 'profiles' collection.
+ * NOTE: Assumes the default Appwrite `$updatedAt` attribute is suitable for "latest activity".
+ *
+ * @param limit - The maximum number of profiles to fetch.
+ * @returns A promise that resolves to an array of UserProfile objects.
+ */
+export const getRecentUserProfiles = async (limit: number = 10): Promise<UserProfile[]> => {
+    if (!profilesCollectionId) {
+        // console.error("Profile Collection ID not configured!");
+        throw new Error("Profile Collection ID not configured.");
+    }
+    // console.log(`Fetching ${limit} most recent user profiles`);
+    try {
+        const response = await databases.listDocuments<UserProfile>(
+            databaseId,
+            profilesCollectionId,
+            [
+                Query.orderDesc('$updatedAt'), // Order by most recently updated
+                Query.limit(limit)
+            ]
+        );
+
+        // Generate profile photo URLs if needed
+        const profilesWithUrls = response.documents.map(profile => {
+            if (profile.profilePhotoId && profileBucketId) {
+                try {
+                    profile.profilePhotoUrl = getFilePreview(profile.profilePhotoId, profileBucketId)?.href;
+                } catch (e) {
+                    handleAppwriteError(e, `generating profile photo URL for recent profile ${profile.$id}`, false);
+                    profile.profilePhotoUrl = undefined;
+                }
+            } else {
+                profile.profilePhotoUrl = undefined;
+            }
+            // Ensure dietaryPreferences is an array
+            if (!Array.isArray(profile.dietaryPreferences)) {
+                profile.dietaryPreferences = [];
+            }
+            return profile;
+        });
+
+        // console.log(`Fetched ${profilesWithUrls.length} recent profiles.`);
+        return profilesWithUrls;
+
+    } catch (error) {
+        handleAppwriteError(error, `fetching recent user profiles`, false);
+        return []; // Return empty on error
+    }
+};
 
 export { ID, Permission, Role,Query };
