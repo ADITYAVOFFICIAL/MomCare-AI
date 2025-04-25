@@ -26,7 +26,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Progress } from "@/components/ui/progress"; // Keep progress for tx status
 import {
     Loader2, AlertTriangle, CheckCircle, BadgeCheck, Wallet, LinkIcon, RefreshCw,
-    Network, LogOut, ExternalLink, Info, Sparkles, CalendarCheck, HeartPulse, Share2, User, Star, Image as ImageIcon, XCircle, HelpCircle
+    Network, LogOut, ExternalLink, Info, Sparkles, CalendarCheck, HeartPulse, Share2, User, Star, Image as ImageIcon, XCircle, HelpCircle,FileUp, MessageSquare
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
@@ -251,20 +251,55 @@ const MonadPage: React.FC = () => {
         console.log(`7-Day Streak check result: ${hasStreak}`);
         return hasStreak;
     }, []);
+    // Placeholder for First Trimester Check
+    const checkFirstTrimester = useCallback(async (userId: string, currentLevel: number): Promise<boolean> => {
+        if (currentLevel >= 1) return false;
+        console.log(`MOCK: Checking First Trimester eligibility for user ${userId}`);
+        // --- Replace MOCK with actual Appwrite/backend logic ---
+        // e.g., check user profile's weeksPregnant against 13 weeks
+        await new Promise(resolve => setTimeout(resolve, 100)); // Simulate async check
+        return false; // Implement actual logic
+    }, []);
+
+    // Placeholder for First Medical Doc Upload Check
+    const checkFirstDocUpload = useCallback(async (userId: string, currentLevel: number): Promise<boolean> => {
+        if (currentLevel >= 1) return false;
+        console.log(`MOCK: Checking First Doc Upload eligibility for user ${userId}`);
+        // --- Replace MOCK with actual Appwrite/backend logic ---
+        // e.g., check if user has uploaded any documents to a specific bucket/collection
+        await new Promise(resolve => setTimeout(resolve, 100)); // Simulate async check
+        return false; // Implement actual logic
+    }, []);
+
+    // Placeholder for First AI Chat Interaction Check
+    const checkFirstAIChat = useCallback(async (userId: string, currentLevel: number): Promise<boolean> => {
+        if (currentLevel >= 1) return false;
+        console.log(`MOCK: Checking First AI Chat eligibility for user ${userId}`);
+        // --- Replace MOCK with actual Appwrite/backend logic ---
+        // e.g., check if user has any messages in the AI chat history
+        await new Promise(resolve => setTimeout(resolve, 100)); // Simulate async check
+        return false; // Implement actual logic
+    }, []);
     // --- End Eligibility Implementations ---
 
     // --- Frontend Milestone Definitions ---
     // !! ENSURE THIS ORDER MATCHES THE ORDER addMilestoneType WAS CALLED ON-CHAIN !!
     const MILESTONE_DEFINITIONS: MilestoneDefinition[] = useMemo(() => [
+        // Existing definitions (IDs 1-5)
         { id: 'profile-complete', targetLevel: 1, description: 'Awarded for completing required profile fields.', icon: User, eligibilityCheck: checkProfileComplete },
         { id: 'first-appointment', targetLevel: 1, description: 'Awarded for logging your first prenatal appointment.', icon: CalendarCheck, eligibilityCheck: checkFirstAppointment },
         { id: 'first-reading', targetLevel: 1, description: 'Awarded for logging your first health reading.', icon: HeartPulse, eligibilityCheck: checkFirstReading },
         { id: '7-day-streak', targetLevel: 1, description: 'Awarded for logging health data for 7 consecutive days.', icon: Star, eligibilityCheck: check7DayStreak },
         { id: 'first-post', targetLevel: 1, description: 'Awarded for making your first post in the forum.', icon: Share2, eligibilityCheck: checkFirstPost },
-        // Add more definitions here, ensuring targetLevel and eligibilityCheck are correct
-        // Example for a potential Type ID 6:
-        // { id: 'first-trimester', targetLevel: 1, description: 'Awarded for completing the first trimester.', icon: CheckCircle, eligibilityCheck: checkFirstTrimester }, // Assuming checkFirstTrimester exists
-    ], [checkProfileComplete, checkFirstAppointment, checkFirstReading, check7DayStreak, checkFirstPost]); // Add all check functions here
+        // Added definitions (IDs 6-8) based on Python script
+        { id: 'first-trimester', targetLevel: 1, description: 'Awarded for completing the first trimester.', icon: CheckCircle, eligibilityCheck: checkFirstTrimester },
+        { id: 'first-doc-upload', targetLevel: 1, description: 'Awarded for uploading your first medical document.', icon: FileUp, eligibilityCheck: checkFirstDocUpload },
+        { id: 'first-ai-chat', targetLevel: 1, description: 'Awarded for your first interaction with the AI chat.', icon: MessageSquare, eligibilityCheck: checkFirstAIChat },
+        // Add more definitions here if needed, ensuring targetLevel and eligibilityCheck are correct
+    ], [
+        checkProfileComplete, checkFirstAppointment, checkFirstReading, check7DayStreak, checkFirstPost,
+        checkFirstTrimester, checkFirstDocUpload, checkFirstAIChat // <-- Add new check functions to dependency array
+    ]);
 
     // --- Web3 Connection Logic (Callbacks defined earlier) ---
     const checkNetwork = useCallback(async (currentProvider: BrowserProvider | null): Promise<boolean> => {
