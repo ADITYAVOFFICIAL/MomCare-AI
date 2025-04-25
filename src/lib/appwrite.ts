@@ -43,8 +43,7 @@ const userCountFunctionId: string = import.meta.env.VITE_PUBLIC_APPWRITE_USER_CO
 export const profileBucketId: string = import.meta.env.VITE_PUBLIC_APPWRITE_PROFILE_BUCKET_ID as string;
 export const medicalBucketId: string = import.meta.env.VITE_PUBLIC_APPWRITE_MEDICAL_BUCKET_ID as string;
 export const chatImagesBucketId: string = import.meta.env.VITE_PUBLIC_APPWRITE_CHAT_IMAGES_BUCKET_ID as string;
-
-// --- Configuration Validation ---
+export const generatedImageBucketId: string = import.meta.env.VITE_PUBLIC_APPWRITE_CHAT_IMAGES_BUCKET_ID as string;
 // Checks if essential configuration variables are present and not placeholders.
 const requiredConfigs: Record<string, string | undefined> = {
     endpoint,
@@ -335,7 +334,7 @@ export type CreateBookmarkData = Pick<BookmarkedMessage, 'messageContent'>;
 
 
 // --- Utility Function for Error Handling ---
-const handleAppwriteError = (error: unknown, context: string, throwGeneric: boolean = false): unknown => {
+export const handleAppwriteError = (error: unknown, context: string, throwGeneric: boolean = false): unknown => {
     let errorMessage = `Error ${context}: Unknown error occurred.`;
     let errorCode: number | string | undefined = undefined;
     let errorType: string | undefined = undefined;
@@ -1777,3 +1776,5 @@ export const getTotalUserCount = async (): Promise<{ totalUsers: number }> => {
         }
     }
 };
+
+export { ID, Permission, Role,Query };

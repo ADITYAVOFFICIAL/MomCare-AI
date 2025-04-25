@@ -250,9 +250,9 @@ const DashboardPage: React.FC = () => {
             const coreDataResults = await Promise.allSettled([
                 getUserProfile(currentUserId),
                 getUserAppointments(currentUserId),
-                getBloodPressureReadings(currentUserId, 1), // Only need latest for feed
-                getBloodSugarReadings(currentUserId, 1),    // Only need latest for feed
-                getWeightReadings(currentUserId, 1),       // Only need latest for feed
+                getBloodPressureReadings(currentUserId, 50), // Fetch more readings for the chart
+                getBloodSugarReadings(currentUserId, 50),    // Fetch more readings for the chart
+                getWeightReadings(currentUserId, 50),       // Fetch more readings for the chart
                 getMedicationReminders(currentUserId),
             ]);
 
@@ -286,7 +286,7 @@ const DashboardPage: React.FC = () => {
             // For now, we'll just use the potentially single reading for the charts too
             setBpReadings(fetchedBp);
             setSugarReadings(fetchedSugar);
-            setWeightReadings(fetchedWeight);
+            setWeightReadings(fetchedWeight); // This will now contain up to 50 readings
             setIsLoadingHealthData(false);
 
             // Medication Reminders
