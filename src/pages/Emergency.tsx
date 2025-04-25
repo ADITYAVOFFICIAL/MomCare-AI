@@ -10,31 +10,47 @@ import { useToast } from '@/hooks/use-toast'; // Assuming this hook exists and w
 import {
   AlertTriangle, Phone, MapPin, Loader2, Hospital, RefreshCw, Navigation,
   HeartPulse, Siren, SearchX, MapPinned, Info, WifiOff, KeyRound, Ban,
-  BriefcaseMedical, ClipboardList, LifeBuoy, Clock, Globe, PhoneCall
+  BriefcaseMedical, ClipboardList, LifeBuoy, Clock, Globe, PhoneCall, Route,
+  Search
 } from 'lucide-react';
 
 // --- Constants ---
-const GEOLOCATION_TIMEOUT = 30000; // 15 seconds
+const GEOLOCATION_TIMEOUT = 20000; // Slightly reduced timeout
 const GOOGLE_MAPS_SCRIPT_ID = "google-maps-places-script";
-const SEARCH_RADIUS_METERS = 20000; // 50km radius for location bias
-const HOSPITAL_SEARCH_KEYWORD = 'hospital emergency room maternity labor delivery medical reputed'; // Keywords for Text Search
-const MAX_SEARCH_RESULTS = 8; // Limit the number of results from the API
+const SEARCH_RADIUS_METERS = 50000; // 50km radius for location bias
+const HOSPITAL_SEARCH_KEYWORD = 'hospital emergency room maternity labor delivery medical reputed';
+const MAX_SEARCH_RESULTS = 10;
 
 // --- Interfaces ---
 interface LocationState { lat: number; lng: number; }
 
 // --- State Enum ---
 enum LoadingStatus {
-  Idle,
-  Locating,
-  LoadingMaps,
-  SearchingHospitals,
-  Success,
-  LocationError,
-  MapsError, // Includes script load errors AND API errors like NOT_ACTIVATED/Key issues
-  SearchError, // Specific errors during the search API call (e.g., INVALID_REQUEST)
-  NoResults,
-  ConfigError // API Key missing
+  Idle,             // Initial state before API key check
+  ConfigError,      // API Key missing
+  PreLoad,          // API Key ok, starting background loads (Maps)
+  LoadingMaps,      // Maps script is actively loading
+  Ready,            // Maps loaded, ready for user interaction (button click)
+  Locating,         // Geolocation in progress (triggered by button)
+  SearchingHospitals,// Places API search in progress
+  Success,          // Search successful, results displayed
+  LocationError,    // Geolocation failed
+  MapsError,        // Maps script load/init failed
+  SearchError,      // Places API search failed
+  NoResults         // Places API search returned no results
+}
+
+// --- Haversine Distance Calculation ---
+function calculateDistance(loc1: LocationState, loc2: LocationState): number | null {
+    if (!loc1 || !loc2) return null;
+    const R = 6371; // km
+    const dLat = (loc2.lat - loc1.lat) * Math.PI / 180;
+    const dLon = (loc2.lng - loc1.lng) * Math.PI / 180;
+    const lat1Rad = loc1.lat * Math.PI / 180;
+    const lat2Rad = loc2.lat * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 }
 
 // --- Skeleton Component ---
@@ -60,241 +76,230 @@ const HospitalSkeleton = () => (
 // --- Main Emergency Component ---
 const Emergency = () => {
   const [currentLocation, setCurrentLocation] = useState<LocationState | null>(null);
-  // Use the specific Place type from google.maps
   const [hospitals, setHospitals] = useState<google.maps.places.Place[]>([]);
   const [status, setStatus] = useState<LoadingStatus>(LoadingStatus.Idle);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showHospitalsRequested, setShowHospitalsRequested] = useState<boolean>(false);
   const { toast } = useToast();
-  const isMounted = useRef(true); // Ref to track component mount status
+  const isMounted = useRef(true);
   const googleMapsApiKey = import.meta.env.VITE_PUBLIC_GOOGLE_MAPS_API_KEY as string;
-  const mapsApiLoaded = useRef(false); // Track if API script has successfully loaded Place class
+  const mapsApiLoaded = useRef(false);
+  const mapsLoadInitiated = useRef(false); // Track if script load has been started
 
-  // --- Lifecycle and API Key Check ---
+  // --- Lifecycle and API Key Check / Initial Maps Load ---
   useEffect(() => {
-    isMounted.current = true; // Component did mount
+    isMounted.current = true;
     if (!googleMapsApiKey) {
-      // console.error("CRITICAL: Google Maps API Key (VITE_PUBLIC_GOOGLE_MAPS_API_KEY) is missing!");
       setErrorMessage("Map service configuration error. API Key is missing.");
       setStatus(LoadingStatus.ConfigError);
       toast({ title: "Config Error", description: "Maps API Key missing.", variant: "destructive" });
     } else {
-      // Start location process only if key exists
-      handleRequestLocation();
+      // API Key exists, start loading maps in background if not already initiated
+      setStatus(LoadingStatus.PreLoad); // Indicate we are ready to start background tasks
+      if (!mapsLoadInitiated.current) {
+        handleLoadGoogleMaps(); // Start loading maps immediately
+        mapsLoadInitiated.current = true;
+      }
     }
-    // Cleanup function runs on unmount
-    return () => {
-        isMounted.current = false;
-    };
+    return () => { isMounted.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount to check API Key
+  }, [googleMapsApiKey]); // Run only once on mount or if API key changes
 
-  // --- Geolocation Handling ---
-  const handleRequestLocation = useCallback(() => {
-    if (!isMounted.current) return; // Don't run if unmounted
-    // console.log("Requesting location...");
-    setStatus(LoadingStatus.Locating);
-    setErrorMessage(null);
-    setCurrentLocation(null);
-    setHospitals([]); // Clear previous results
-
-    if (!navigator.geolocation) {
-      // console.warn("Geolocation is not supported by this browser.");
-      setErrorMessage("Geolocation is not supported by your browser.");
-      setStatus(LoadingStatus.LocationError);
-      return;
-    }
-
-    // Request current position
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (!isMounted.current) return; // Check mount status again in async callback
-        // console.log("Location acquired:", position.coords);
-        const newLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
-        setCurrentLocation(newLocation);
-        // Proceed to load maps script IF NOT ALREADY LOADED successfully
-        if (!mapsApiLoaded.current) {
-            handleLoadGoogleMaps();
-        } else {
-            // console.log("Maps API already loaded, proceeding to search.");
-            setStatus(LoadingStatus.SearchingHospitals); // If maps are ready, go straight to search
-        }
-      },
-      (error) => {
-        if (!isMounted.current) return; // Check mount status
-        // console.error("Geolocation error:", error.code, error.message);
-        let message = "Unable to retrieve your location.";
-        switch (error.code) {
-            case error.PERMISSION_DENIED:
-                message = "Location access denied. Please allow location access in your browser settings and refresh the page.";
-                break;
-            case error.POSITION_UNAVAILABLE:
-                message = "Location information is currently unavailable. Please check your connection or try again later.";
-                break;
-            case error.TIMEOUT:
-                message = "Location request timed out. Please check your network connection and try again.";
-                break;
-        }
-        setErrorMessage(message);
-        setStatus(LoadingStatus.LocationError);
-      },
-      // Options for geolocation request
-      { enableHighAccuracy: true, timeout: GEOLOCATION_TIMEOUT, maximumAge: 0 } // Force fresh location
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapsApiLoaded.current]); // Rerun if mapsApiLoaded status changes (though it's a ref, this dependency ensures logic runs if state depends on it)
-
-  // --- Google Maps Script Loading ---
+  // --- Google Maps Script Loading (Can be called on mount or retry) ---
   const handleLoadGoogleMaps = useCallback(() => {
-    if (!isMounted.current || !googleMapsApiKey || mapsApiLoaded.current) return; // Check mount, API key, and if already loaded
+    // console.log("handleLoadGoogleMaps called", { isMounted: isMounted.current, googleMapsApiKey: !!googleMapsApiKey, mapsApiLoaded: mapsApiLoaded.current });
+    // Prevent loading if already loaded, no key, or component unmounted
+    if (!isMounted.current || !googleMapsApiKey || mapsApiLoaded.current) return;
 
-    // Check if the modern Place class is already available (e.g., loaded by another component)
-    // Also check for the specific method we need: searchByText
+    // Check if the specific API we need is already available (might have loaded between checks)
     if (window.google?.maps?.places?.Place?.searchByText) {
       // console.log("Google Maps script & Place.searchByText already available.");
-      mapsApiLoaded.current = true; // Mark as loaded
-      setStatus(LoadingStatus.SearchingHospitals); // Ready to search
+      mapsApiLoaded.current = true;
+      // If maps just finished loading, transition to Ready state
+      if (status === LoadingStatus.LoadingMaps || status === LoadingStatus.PreLoad) {
+        setStatus(LoadingStatus.Ready);
+      }
       return;
     }
 
-    // Check if the script tag already exists
+    // If script tag exists, assume it's loading or failed, wait for callback/timeout
     if (document.getElementById(GOOGLE_MAPS_SCRIPT_ID)) {
-      // console.log("Google Maps script tag exists, waiting for it to load/initialize...");
-      setStatus(LoadingStatus.LoadingMaps);
-      // Add a timeout fallback in case onload never fires or Place class fails to init
-      const timeoutId = setTimeout(() => {
-        if (isMounted.current && status === LoadingStatus.LoadingMaps && !window.google?.maps?.places?.Place?.searchByText) {
-          // console.error("Timeout waiting for existing Google Maps script to initialize Place.searchByText. Check API Key/Console.");
-          setErrorMessage("Map service took too long to initialize. Check API Key setup in Google Cloud Console (ensure 'Places API (New)' is enabled) or network, then refresh.");
-          setStatus(LoadingStatus.MapsError); // Use MapsError for API/Script issues
-        }
-      }, 15000); // Wait 15 seconds
-      // Store timeout to clear it if onload fires correctly
-      (window as any).googleMapsLoadTimeout = timeoutId;
-      return;
+       // console.log("Google Maps script tag exists, waiting for it to load/initialize...");
+       // Ensure status reflects loading state if we are in PreLoad
+       if (status === LoadingStatus.PreLoad) {
+           setStatus(LoadingStatus.LoadingMaps);
+       }
+       // Add a timeout fallback in case onload never fires
+       const timeoutId = setTimeout(() => {
+         if (isMounted.current && status === LoadingStatus.LoadingMaps && !window.google?.maps?.places?.Place?.searchByText) {
+           setErrorMessage("Map service took too long to initialize. Check API Key setup (Places API (New) enabled) or network, then refresh.");
+           setStatus(LoadingStatus.MapsError);
+           // No need to reset showHospitalsRequested here as it handles errors gracefully
+         }
+       }, 15000); // 15 second timeout
+       (window as any).googleMapsLoadTimeout = timeoutId;
+       return;
     }
 
     // console.log("Loading Google Maps script...");
-    setStatus(LoadingStatus.LoadingMaps);
-    setErrorMessage(null); // Clear previous errors
+    // Set status to LoadingMaps only if it wasn't already (e.g., from PreLoad)
+    if (status !== LoadingStatus.LoadingMaps) {
+        setStatus(LoadingStatus.LoadingMaps);
+    }
+    setErrorMessage(null);
 
     const script = document.createElement("script");
     script.id = GOOGLE_MAPS_SCRIPT_ID;
-    // Use libraries=places to load the Places library
-    // Use loading=async for non-blocking load
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&loading=async&callback=initMap`;
     script.async = true;
-    script.defer = true; // Defer execution until HTML parsing is complete
+    script.defer = true;
 
-    script.onload = () => {
-      // Clear timeout fallback if it exists
-      if ((window as any).googleMapsLoadTimeout) {
-        clearTimeout((window as any).googleMapsLoadTimeout);
+    // Define the global callback function
+    (window as any).initMap = () => {
+        // console.log("Google Maps script loaded via initMap callback.");
+        if ((window as any).googleMapsLoadTimeout) clearTimeout((window as any).googleMapsLoadTimeout);
         delete (window as any).googleMapsLoadTimeout;
-      }
-      if (!isMounted.current) return;
-      // console.log("Google Maps script loaded via onload.");
-      // CRITICAL CHECK: Verify Place class AND searchByText method exist AFTER onload
-      if (window.google?.maps?.places?.Place?.searchByText) {
-        // console.log("Place.searchByText confirmed available after onload.");
-        mapsApiLoaded.current = true; // Mark as loaded
-        setStatus(LoadingStatus.SearchingHospitals); // Now ready to search
-      } else {
-        // console.error("Place.searchByText method missing after script load event. CRITICAL: Check API Key, ensure 'Places API (New)' is ENABLED in Google Cloud Console, check restrictions, and check console for Google Maps specific errors.");
-        setErrorMessage("Map service components failed to load. Ensure 'Places API (New)' is enabled in Google Cloud Console for your key, check restrictions, and then refresh.");
-        setStatus(LoadingStatus.MapsError); // Use MapsError status
-      }
+        if (!isMounted.current) return;
+
+        if (window.google?.maps?.places?.Place?.searchByText) {
+            // console.log("Place.searchByText confirmed available after initMap.");
+            mapsApiLoaded.current = true;
+            // Maps are ready. Now check if user has already clicked the button AND location is ready
+            if (showHospitalsRequested && currentLocation) {
+                setStatus(LoadingStatus.SearchingHospitals); // Trigger search immediately
+            } else {
+                setStatus(LoadingStatus.Ready); // Maps ready, wait for user action or location
+            }
+        } else {
+            // console.error("Place.searchByText method missing after initMap. CRITICAL: Check API Key, 'Places API (New)' ENABLED, restrictions, console errors.");
+            setErrorMessage("Map service components failed to load. Ensure 'Places API (New)' is enabled in Google Cloud Console, check restrictions, and refresh.");
+            setStatus(LoadingStatus.MapsError);
+        }
     };
 
     script.onerror = (error) => {
-       if ((window as any).googleMapsLoadTimeout) clearTimeout((window as any).googleMapsLoadTimeout); // Clear timeout on error too
+       if ((window as any).googleMapsLoadTimeout) clearTimeout((window as any).googleMapsLoadTimeout);
+       delete (window as any).googleMapsLoadTimeout;
+       delete (window as any).initMap; // Clean up callback reference
       if (!isMounted.current) return;
-      // console.error("Failed to load Google Maps script:", error);
       setErrorMessage("Failed to load map service script. Check network connection or API key validity/restrictions.");
       setStatus(LoadingStatus.MapsError);
     };
 
     document.body.appendChild(script);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleMapsApiKey, status]); // Include status to potentially clear timeout
+  }, [googleMapsApiKey, status, currentLocation, showHospitalsRequested]); // Include dependencies that might influence state transition after load
 
-  // --- Google Places Search (Using searchByText with locationBias) ---
+  // --- Geolocation Handling (Triggered by user click) ---
+  const handleRequestLocation = useCallback(() => {
+    if (!isMounted.current || status === LoadingStatus.Locating) return;
+
+    // console.log("Requesting location (triggered by user)...");
+    setStatus(LoadingStatus.Locating);
+    setErrorMessage(null);
+    setCurrentLocation(null); // Reset location before getting a new one
+
+    if (!navigator.geolocation) {
+      setErrorMessage("Geolocation is not supported by your browser.");
+      setStatus(LoadingStatus.LocationError);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (!isMounted.current) return;
+        // console.log("Location acquired:", position.coords);
+        const newLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+        setCurrentLocation(newLocation);
+
+        // Location acquired. Check if maps are ready to proceed to search.
+        if (mapsApiLoaded.current) {
+            setStatus(LoadingStatus.SearchingHospitals); // Both ready, start search
+        } else {
+            // Maps not ready yet. The maps load callback (initMap) will handle
+            // transitioning to SearchingHospitals once maps are loaded.
+            // Stay in Locating or move to LoadingMaps if that's the current state.
+            // If maps failed previously, stay in MapsError.
+            if (status !== LoadingStatus.MapsError) {
+                 setStatus(LoadingStatus.LoadingMaps); // Indicate we're now waiting for maps
+            }
+        }
+      },
+      (error) => {
+        if (!isMounted.current) return;
+        // console.error("Geolocation error:", error.code, error.message);
+        let message = "Unable to retrieve your location.";
+        switch (error.code) {
+            case error.PERMISSION_DENIED: message = "Location access denied. Please allow location access and try again."; break;
+            case error.POSITION_UNAVAILABLE: message = "Location information unavailable. Check connection/try again."; break;
+            case error.TIMEOUT: message = "Location request timed out. Check network/try again."; break;
+        }
+        setErrorMessage(message);
+        setStatus(LoadingStatus.LocationError);
+        // Reset request flag implicitly because the button remains clickable on error
+      },
+      { enableHighAccuracy: true, timeout: GEOLOCATION_TIMEOUT, maximumAge: 0 }
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // Depends on status to prevent re-entry
+
+  // --- Google Places Search ---
   const findNearbyHospitalsByText = useCallback(async () => {
-     if (!isMounted.current || !currentLocation || status !== LoadingStatus.SearchingHospitals) {
-        //  console.log("Search skipped. Conditions not met:", { isMounted: isMounted.current, currentLocation: !!currentLocation, status });
+     if (!isMounted.current || !currentLocation || status !== LoadingStatus.SearchingHospitals || !mapsApiLoaded.current) {
          return;
      }
-    // console.log(`Searching for nearby places using text query: "${HOSPITAL_SEARCH_KEYWORD}" biased near:`, currentLocation);
+    // console.log(`Searching for nearby places...`);
 
-    // Robust check for Place class AND the specific search method availability
     if (!window.google?.maps?.places?.Place?.searchByText) {
-      // console.error("Place.searchByText method not available. Map service might be partially loaded or script failed. Check API Key/Console.");
-      setErrorMessage("Map service components not ready. Ensure 'Places API (New)' is enabled in Google Cloud Console and refresh.");
+      setErrorMessage("Map service components not ready. Ensure 'Places API (New)' is enabled and refresh.");
       setStatus(LoadingStatus.MapsError);
       return;
     }
 
-    // Use LatLngLiteral for type compatibility with locationBias center
     const locationCenter: google.maps.LatLngLiteral = { lat: currentLocation.lat, lng: currentLocation.lng };
-
-    // Define the request for Place.searchByText
-    // Ensure you have @types/google.maps installed for these types
     const request: google.maps.places.SearchByTextRequest = {
-      textQuery: HOSPITAL_SEARCH_KEYWORD, // The keyword search term
-      // Specify the fields you want in the results (camelCase)
-      // Refer to Places API (New) docs for available fields and associated SKUs
+      textQuery: HOSPITAL_SEARCH_KEYWORD,
       fields: [
-        'id', // Essential for keys and map links
-        'displayName', // Hospital name
-        'formattedAddress', // Full address
-        'location', // LatLngLiteral for positioning (if needed later for map markers)
-        'rating', // Average user rating
-        'userRatingCount', // Number of ratings
-        'regularOpeningHours', // Request the object to check isOpen()
-        'businessStatus', // e.g., OPERATIONAL, CLOSED_TEMPORARILY
-        'websiteURI', // Official website
-        'nationalPhoneNumber', // Local phone number
-        'types', // To help filter/verify relevance
+        'id', 'displayName', 'formattedAddress', 'location', 'rating',
+        'userRatingCount', 'regularOpeningHours', 'businessStatus', // regularOpeningHours needed for isOpen()
+        'websiteURI', 'nationalPhoneNumber', 'types',
       ],
-      // Use locationBias to prioritize results near the user
-      // This biases results towards the area, but doesn't strictly exclude outside results.
-      locationBias: {
-        center: locationCenter,
-        radius: SEARCH_RADIUS_METERS,
-      },
-      // If strict restriction is needed, calculate LatLngBoundsLiteral and use locationRestriction
-      // locationRestriction: calculateBounds(locationCenter, SEARCH_RADIUS_METERS), // Example if needed
-      maxResultCount: MAX_SEARCH_RESULTS, // Limit the number of results
-      // Optional: Add language preference
-      // language: 'en-US',
-      // Optional: Add region bias (helps format addresses, e.g., 'in' for India)
-      // region: 'in',
+      locationBias: { center: locationCenter, radius: SEARCH_RADIUS_METERS },
+      maxResultCount: MAX_SEARCH_RESULTS,
     };
 
     try {
         // console.log("Sending searchByText request:", request);
-        // Use Place.searchByText from the JS SDK
-        // Ensure google.maps.places.Place is correctly typed if using @types/google.maps
         const { places } = await window.google.maps.places.Place.searchByText(request);
-
-        if (!isMounted.current) return; // Check mount status after await
-
-        // console.log("searchByText results received:", places);
+        if (!isMounted.current) return;
 
         if (places && places.length > 0) {
-            // Filter results more robustly: ensure it has an ID and relevant type
             const validResults = places.filter(place =>
-                place.id && // Must have an ID
-                place.types?.some(type => ['hospital', 'health', 'doctor', 'clinic'].includes(type.toLowerCase())) // Check if any type matches common health terms (case-insensitive)
+                place.id && place.location &&
+                place.types?.some(type => ['hospital', 'health', 'doctor', 'clinic'].includes(type.toLowerCase()))
             );
 
             if (validResults.length > 0) {
-                // console.log("Filtered valid results:", validResults);
-                setHospitals(validResults);
-                setStatus(LoadingStatus.Success);
-                setErrorMessage(null); // Clear any previous error message on success
+                const sortedResults = validResults
+                    .map(place => ({
+                        place,
+                        distanceKm: calculateDistance(currentLocation, { lat: place.location!.lat(), lng: place.location!.lng() })
+                    }))
+                    .filter(item => item.distanceKm !== null)
+                    .sort((a, b) => a.distanceKm! - b.distanceKm!)
+                    .map(item => item.place);
+
+                if (sortedResults.length > 0) {
+                    setHospitals(sortedResults);
+                    setStatus(LoadingStatus.Success);
+                    setErrorMessage(null);
+                } else {
+                    setErrorMessage("Could not calculate distances for found hospitals.");
+                    setStatus(LoadingStatus.NoResults);
+                    setHospitals([]);
+                }
             } else {
-                //  console.log("Initial results found, but none passed filtering criteria:", places);
-                 setErrorMessage("No relevant hospitals found nearby matching the specific criteria (e.g., type). Try broadening search terms if needed.");
+                 setErrorMessage("No relevant hospitals with location data found nearby matching the criteria.");
                  setStatus(LoadingStatus.NoResults);
                  setHospitals([]);
             }
@@ -304,200 +309,232 @@ const Emergency = () => {
             setHospitals([]);
         }
     } catch (error: any) {
-        if (!isMounted.current) return; // Check mount status in catch block
+        if (!isMounted.current) return;
         // console.error("Error during Place.searchByText:", error);
-
         let userMessage = `Failed to find hospitals. Please try again later.`;
-        let specificStatus = LoadingStatus.SearchError; // Default to general search error
-
-        // Check for common Google Maps API error structures/messages
-        // Note: JS SDK errors might not have standard 'code' properties like HTTP errors
+        let specificStatus = LoadingStatus.SearchError;
         const errorMessageString = error?.message?.toLowerCase() || '';
-
-        if (errorMessageString.includes('api_key_invalid') ||
-            errorMessageString.includes('permission denied') ||
-            errorMessageString.includes('apinotactivatedmaperror') || // Common error if API not enabled
-            errorMessageString.includes('keyexpiredmaperror') ||
-            errorMessageString.includes('keyinvalidmaperror'))
-        {
-             userMessage = "Map service error: API Key invalid, restricted, expired, or 'Places API (New)' not enabled in Google Cloud Console. Please check configuration.";
-             specificStatus = LoadingStatus.MapsError; // Use MapsError for config/key issues
+        // ... (error message parsing as before) ...
+        if (errorMessageString.includes('api_key_invalid') || errorMessageString.includes('permission denied') || errorMessageString.includes('apinotactivatedmaperror') || errorMessageString.includes('keyexpiredmaperror') || errorMessageString.includes('keyinvalidmaperror')) {
+             userMessage = "Map service error: API Key invalid, restricted, expired, or 'Places API (New)' not enabled. Check configuration.";
+             specificStatus = LoadingStatus.MapsError;
         } else if (errorMessageString.includes('zero_results')) {
              userMessage = "No places found nearby matching the search query.";
              specificStatus = LoadingStatus.NoResults;
         } else if (errorMessageString.includes('invalid_request')) {
-             userMessage = "Map service request was invalid. Check parameters or search query.";
+             userMessage = "Map service request was invalid. Check parameters.";
              specificStatus = LoadingStatus.SearchError;
         } else if (errorMessageString.includes('network error') || errorMessageString.includes('fetch')) {
-             userMessage = "Network error while searching for hospitals. Please check your connection and try again.";
-             specificStatus = LoadingStatus.SearchError; // Could also be MapsError depending on context
+             userMessage = "Network error searching for hospitals. Check connection.";
+             specificStatus = LoadingStatus.SearchError;
         }
-        // Add more specific error checks if needed based on observed errors
 
         setErrorMessage(userMessage);
         setStatus(specificStatus);
         setHospitals([]);
     }
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentLocation, status, googleMapsApiKey]); // Dependencies for the search function
+  }, [currentLocation, status]); // Depends on location and status
 
-  // --- Effect to trigger search when status is ready ---
+  // --- Effect to trigger search ---
   useEffect(() => {
-    // Trigger search only when location is available AND maps are ready (status indicates searching)
-    if (status === LoadingStatus.SearchingHospitals && currentLocation && mapsApiLoaded.current) {
-      // Double check Place.searchByText availability before calling search
-      if (window.google?.maps?.places?.Place?.searchByText) {
-          findNearbyHospitalsByText(); // Call the corrected search function
-      } else {
-          // console.warn("Search triggered, but Place.searchByText still not ready. Waiting briefly...");
-          // Optionally add a small delay and retry check, or rely on user refresh/next state change
-          const checkAgain = setTimeout(() => {
-              if (!isMounted.current) return;
-              if (status === LoadingStatus.SearchingHospitals && !window.google?.maps?.places?.Place?.searchByText) {
-                  // console.error("Place.searchByText still not available after delay. Check API Key/Console.");
-                  setErrorMessage("Map service failed to initialize properly. Ensure 'Places API (New)' is enabled and refresh.");
-                  setStatus(LoadingStatus.MapsError);
-              } else if (status === LoadingStatus.SearchingHospitals && currentLocation && mapsApiLoaded.current) {
-                  // It might be ready now, try searching again if conditions still met
-                  // console.log("Retrying search after brief delay...");
-                  findNearbyHospitalsByText();
-              }
-          }, 1500); // Check again after 1.5 seconds
-          return () => clearTimeout(checkAgain); // Cleanup timeout
-      }
+    // Trigger search ONLY when status is SearchingHospitals
+    // Other conditions (location, maps loaded) are checked within findNearbyHospitalsByText
+    if (status === LoadingStatus.SearchingHospitals) {
+        findNearbyHospitalsByText();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, currentLocation, mapsApiLoaded.current, findNearbyHospitalsByText]); // Rerun when status, location, or maps loaded status changes, or search function ref changes
+  }, [status, findNearbyHospitalsByText]); // Trigger only when status becomes SearchingHospitals
+
+  // --- Button Click Handler ---
+  const handleShowHospitalsClick = useCallback(() => {
+    // console.log("Show Hospitals button clicked.");
+    setShowHospitalsRequested(true);
+    setHospitals([]); // Clear previous results
+    setErrorMessage(null);
+
+    // Determine next step based on current state
+    if (mapsApiLoaded.current && currentLocation) {
+        // console.log("Maps loaded and location available. Starting search.");
+        setStatus(LoadingStatus.SearchingHospitals);
+    } else if (!currentLocation) {
+        // console.log("Location missing. Requesting location.");
+        handleRequestLocation(); // This will trigger search if maps are ready after location is found
+    } else if (!mapsApiLoaded.current) {
+        // console.log("Maps not loaded. Waiting for maps to load.");
+        // Maps are loading in the background. Set status to LoadingMaps if not already an error.
+        // The initMap callback will trigger the search if location is ready.
+        if (status !== LoadingStatus.MapsError && status !== LoadingStatus.LoadingMaps) {
+             setStatus(LoadingStatus.LoadingMaps);
+        }
+        // If maps failed to load previously (MapsError), try loading again
+        if (status === LoadingStatus.MapsError) {
+            handleLoadGoogleMaps();
+        }
+    }
+  }, [status, currentLocation, handleRequestLocation, handleLoadGoogleMaps]);
 
   // --- Helper to generate Google Maps link ---
   const generateMapLink = (placeId: string | undefined): string => {
-    if (!placeId) return '#'; // Safe fallback
-    // Use query_place_id for directing to a specific known place ID
+    if (!placeId) return '#';
     return `https://www.google.com/maps/search/?api=1&query_place_id=${placeId}`;
   }
 
   // --- Render Hospital List Content ---
   const renderHospitalContent = () => {
+    // Show button initially or if an error occurred before request
+    if (!showHospitalsRequested) {
+      // Button should be enabled unless maps are actively loading or config error
+      const isButtonDisabled = status === LoadingStatus.LoadingMaps || status === LoadingStatus.ConfigError || status === LoadingStatus.Idle || status === LoadingStatus.PreLoad;
+      let buttonText = "Show Nearby Hospitals";
+      if (status === LoadingStatus.LoadingMaps) buttonText = "Loading Maps...";
+
+      return (
+        <div className="flex flex-col items-center justify-center text-center flex-grow py-10">
+          <Hospital className="h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-600 font-medium mb-2">Find Hospitals Near You</p>
+          <p className="text-gray-500 text-sm mb-6 max-w-md">Click the button to use your current location to find nearby hospitals with emergency and maternity services.</p>
+          <Button
+            onClick={handleShowHospitalsClick}
+            disabled={isButtonDisabled}
+            size="lg"
+            className="bg-momcare-primary hover:bg-momcare-dark text-white"
+          >
+            {isButtonDisabled && status !== LoadingStatus.ConfigError && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {!isButtonDisabled && <Search className="mr-2 h-4 w-4" />}
+            {buttonText}
+          </Button>
+           {/* Show maps error below button if it occurred during background load */}
+           {status === LoadingStatus.MapsError && errorMessage && (
+                <p className="text-red-600 text-xs mt-4 max-w-sm">{errorMessage}</p>
+           )}
+        </div>
+      );
+    }
+
+    // --- If hospitals HAVE been requested, show status/results ---
     switch (status) {
-        // Loading States
-        case LoadingStatus.Idle:
-            return <div className="flex flex-col items-center justify-center text-center flex-grow py-10"><p className="text-gray-500">Initializing...</p></div>;
+        // Loading states after button click
         case LoadingStatus.Locating:
           return ( <div className="flex flex-col items-center justify-center text-center flex-grow py-10"><Loader2 className="h-10 w-10 animate-spin text-momcare-primary mb-4" /><p className="text-gray-600 font-medium">Getting your location...</p><p className="text-sm text-gray-500 mt-1">Please wait or allow location access.</p></div> );
-        case LoadingStatus.LoadingMaps:
+        case LoadingStatus.LoadingMaps: // Show this if waiting for maps *after* button click
           return ( <div className="flex flex-col items-center justify-center text-center flex-grow py-10"><Loader2 className="h-10 w-10 animate-spin text-momcare-primary mb-4" /><p className="text-gray-600 font-medium">Loading map services...</p></div> );
         case LoadingStatus.SearchingHospitals:
-          return ( <div className="space-y-4"><p className="text-center text-gray-600 font-medium mb-4">Finding nearby hospitals...</p>{[...Array(3)].map((_, i) => <HospitalSkeleton key={i} />)}</div> );
+          return ( <div className="space-y-4"><p className="text-center text-gray-600 font-medium mb-4">Finding and sorting nearby hospitals...</p>{[...Array(3)].map((_, i) => <HospitalSkeleton key={i} />)}</div> );
 
-        // Error States
+        // Error States (after button click)
         case LoadingStatus.LocationError: case LoadingStatus.MapsError: case LoadingStatus.SearchError: case LoadingStatus.ConfigError:
           const ErrorIcon = status === LoadingStatus.LocationError ? Ban
                            : status === LoadingStatus.ConfigError ? KeyRound
-                           : status === LoadingStatus.MapsError ? WifiOff // Or KeyRound if includes API key issues
-                           : AlertTriangle; // General search error
+                           : status === LoadingStatus.MapsError ? WifiOff
+                           : AlertTriangle;
           const errorTitle = status === LoadingStatus.ConfigError ? "Configuration Issue"
                            : status === LoadingStatus.LocationError ? "Location Error"
                            : status === LoadingStatus.MapsError ? "Map Service Error"
                            : "Search Error";
-          return ( <div className="flex flex-col items-center justify-center text-center flex-grow py-10 bg-red-50 p-6 rounded-md border border-red-200"><ErrorIcon className="h-10 w-10 text-red-500 mb-4" /><p className="text-red-700 font-semibold mb-2">{errorTitle}</p><p className="text-red-600 text-sm mb-4 max-w-md">{errorMessage || "An unexpected error occurred."}</p>{status !== LoadingStatus.ConfigError && (<Button onClick={handleRequestLocation} variant="destructive" size="sm"><RefreshCw className="mr-2 h-4 w-4" /> Try Again</Button>)}</div> );
+          return (
+            <div className="flex flex-col items-center justify-center text-center flex-grow py-10 bg-red-50 p-6 rounded-md border border-red-200">
+                <ErrorIcon className="h-10 w-10 text-red-500 mb-4" />
+                <p className="text-red-700 font-semibold mb-2">{errorTitle}</p>
+                <p className="text-red-600 text-sm mb-4 max-w-md">{errorMessage || "An unexpected error occurred."}</p>
+                {status !== LoadingStatus.ConfigError && (
+                    <Button onClick={handleShowHospitalsClick} variant="destructive" size="sm">
+                        <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+                    </Button>
+                )}
+            </div>
+           );
 
         // No Results State
         case LoadingStatus.NoResults:
-          return ( <div className="flex flex-col items-center justify-center text-center flex-grow py-10"><SearchX className="h-12 w-12 text-gray-400 mb-4" /><p className="text-gray-600 font-medium mb-2">No Nearby Hospitals Found</p><p className="text-gray-500 text-sm mb-4 max-w-md">{errorMessage || "We couldn't find relevant hospitals near your location matching the search criteria."}</p><Button onClick={handleRequestLocation} variant="outline" size="sm"><RefreshCw className="mr-2 h-4 w-4" /> Refresh Search</Button></div> );
+          return (
+            <div className="flex flex-col items-center justify-center text-center flex-grow py-10">
+                <SearchX className="h-12 w-12 text-gray-400 mb-4" />
+                <p className="text-gray-600 font-medium mb-2">No Nearby Hospitals Found</p>
+                <p className="text-gray-500 text-sm mb-4 max-w-md">{errorMessage || "We couldn't find relevant hospitals near your location matching the search criteria."}</p>
+                <Button onClick={handleShowHospitalsClick} variant="outline" size="sm">
+                    <RefreshCw className="mr-2 h-4 w-4" /> Refresh Search
+                </Button>
+            </div>
+           );
 
         // Success State
         case LoadingStatus.Success:
+          if (!currentLocation) { // Should have location by now, but safeguard
+             return <p className="text-center py-10 text-gray-500">Location unavailable for distance calculation.</p>;
+          }
           return (
             <div className="space-y-5">
               <Alert variant="default" className="bg-blue-50 border-blue-200 text-blue-800">
                   <Clock className="h-4 w-4 text-blue-600" />
-                  <AlertTitle className="font-medium text-blue-900">Opening Hours Note</AlertTitle>
+                  <AlertTitle className="font-medium text-blue-900">Opening Hours & Distance Note</AlertTitle>
                   <AlertDescription className="text-xs">
-                    "Open Now" status reflects general hours from Google. Emergency Room availability may differ and can change rapidly.
+                    Hospitals are sorted by approximate distance. "Open Now" status reflects general hours from Google. Emergency Room availability may differ.
                     <strong className="block mt-1">Please call the hospital directly if possible to confirm ER status, capacity, and specific maternal care services before traveling.</strong>
                   </AlertDescription>
               </Alert>
-              
-              {hospitals.map((hospital) => {
-                // Extract data using modern field names (camelCase) from the Place object
+
+              {hospitals.map((hospital, index) => {
                 const placeId = hospital.id;
                 const name = hospital.displayName;
                 const address = hospital.formattedAddress;
-                // Check if regularOpeningHours exists and call isOpen()
-                // The isOpen() method might not exist if opening hours data isn't available for the place
-                // or if the 'regularOpeningHours' field wasn't requested/returned successfully.
-                const isOpenNow = hospital.regularOpeningHours 
-                  ? (hospital.regularOpeningHours as any).isOpenNow?.() || 
-                    (hospital.regularOpeningHours as any).isOpen?.()
-                  : undefined;
+                const distanceKm = hospital.location ? calculateDistance(currentLocation, { lat: hospital.location.lat(), lng: hospital.location.lng() }) : null;
 
-                const rating = hospital.rating; // number | undefined
-                const userRatingCount = hospital.userRatingCount; // number | undefined
-                // Format business status nicely (e.g., 'OPERATIONAL' -> 'operational')
-                const statusText = hospital.businessStatus?.replace(/_/g, ' ').toLowerCase(); // string | undefined
-                const website = hospital.websiteURI; // string | undefined
-                const phone = hospital.nationalPhoneNumber; // string | undefined
+                // Use the Place.isOpen() method (requires regularOpeningHours field)
+                const isOpenNow = hospital.isOpen?.(); // Returns true, false, or undefined
+
+                const rating = hospital.rating;
+                const userRatingCount = hospital.userRatingCount;
+                const statusText = hospital.businessStatus?.replace(/_/g, ' ').toLowerCase();
+                const website = hospital.websiteURI;
+                const phone = hospital.nationalPhoneNumber;
 
                 return (
-                    <Card key={placeId} className="border border-gray-200 shadow-sm rounded-lg overflow-hidden transition-shadow hover:shadow-md">
+                    <Card key={placeId || index} className="border border-gray-200 shadow-sm rounded-lg overflow-hidden transition-shadow hover:shadow-md">
                        <CardHeader className="p-4">
-                         <CardTitle className="text-base font-semibold text-momcare-primary">{name || 'Hospital Name Unavailable'}</CardTitle>
+                         <div className="flex justify-between items-start gap-2">
+                            <CardTitle className="text-base font-semibold text-momcare-primary">{name || 'Hospital Name Unavailable'}</CardTitle>
+                            {distanceKm !== null && (
+                                <Badge variant="outline" className="text-xs font-medium whitespace-nowrap flex-shrink-0 border-blue-300 bg-blue-50 text-blue-800">
+                                    <Route className="h-3 w-3 mr-1" />
+                                    {distanceKm < 1 ? `${(distanceKm * 1000).toFixed(0)} m` : `${distanceKm.toFixed(1)} km`} away
+                                </Badge>
+                            )}
+                         </div>
                          {address && (<CardDescription className="text-xs text-gray-500 mt-0.5 flex items-start"><MapPin className="h-3 w-3 mr-1 flex-shrink-0 mt-px" />{address}</CardDescription>)}
                        </CardHeader>
                        <CardContent className="p-4 pt-0 space-y-2">
-                         {/* Badges Row */}
-                         <div className="flex flex-wrap gap-2 items-center mb-2">
-                             {/* Display Open Status */}
+                       <div className="flex flex-wrap gap-2 items-center mb-2">
                              {isOpenNow !== undefined && (
                                 <Badge
                                     variant={isOpenNow ? "default" : "destructive"}
-                                    className={`text-xs font-medium ${isOpenNow
-                                        ? 'bg-green-100 text-green-800 border-green-200'
-                                        : 'bg-red-100 text-red-800 border-red-200'
-                                    }`}
+                                    className={`text-xs font-medium ${isOpenNow ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200 hover:text-green-900' : 'bg-red-100 text-red-800 border-red-200 hover:bg-momcare-primary hover:text-white'}`}
                                 >
                                    {isOpenNow ? "Open Now (General)" : "Likely Closed (General)"}
                                 </Badge>
                              )}
-                             {/* Display Rating */}
+                             {isOpenNow === undefined && ( // Show if isOpen() returns undefined
+                                 <Badge variant="outline" className="text-xs font-medium border-gray-300 bg-gray-100 text-gray-600">Hours Unknown</Badge>
+                             )}
                              {typeof rating === 'number' && rating > 0 && (
-                                <Badge variant="secondary" className="text-xs font-medium bg-yellow-100 text-yellow-800 border-yellow-200">
+                                <Badge variant="secondary" className="text-xs font-medium bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200 hover:text-yellow-900">
                                     {rating.toFixed(1)} ★ {typeof userRatingCount === 'number' ? `(${userRatingCount} ratings)` : ''}
                                 </Badge>
                              )}
-                             {/* Display Business Status */}
-                             {statusText && statusText !== 'operational' && ( // Show status if not 'operational'
+                             {statusText && statusText !== 'operational' && (
                                 <Badge variant="outline" className="text-xs capitalize border-orange-300 bg-orange-50 text-orange-800">
                                     {statusText}
                                 </Badge>
                              )}
                          </div>
-                         {/* Contact Info Row */}
                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
-                            {phone && (
-                                <a href={`tel:${phone}`} className="flex items-center hover:text-momcare-primary hover:underline focus:outline-none focus:ring-1 focus:ring-momcare-primary rounded">
-                                    <PhoneCall className="h-3.5 w-3.5 mr-1" /> {phone}
-                                </a>
-                            )}
-                            {website && (
-                                <a href={website} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-momcare-primary hover:underline focus:outline-none focus:ring-1 focus:ring-momcare-primary rounded">
-                                    <Globe className="h-3.5 w-3.5 mr-1" /> Website
-                                </a>
-                            )}
+                            {phone && ( <a href={`tel:${phone}`} className="flex items-center hover:text-momcare-primary hover:underline focus:outline-none focus:ring-1 focus:ring-momcare-primary rounded"><PhoneCall className="h-3.5 w-3.5 mr-1" /> {phone}</a> )}
+                            {website && ( <a href={website} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-momcare-primary hover:underline focus:outline-none focus:ring-1 focus:ring-momcare-primary rounded"><Globe className="h-3.5 w-3.5 mr-1" /> Website</a> )}
                          </div>
                        </CardContent>
                        <CardFooter className="p-4 bg-gray-50/70 border-t">
-                           {/* Button to get directions */}
                            <Button asChild size="sm" className="bg-momcare-primary hover:bg-momcare-dark text-white" disabled={!placeId}>
-                             <a
-                               href={generateMapLink(placeId)} // Use the helper
-                               target="_blank" // Open in new tab
-                               rel="noopener noreferrer" // Security best practice
-                               aria-label={`Get directions to ${name || 'this hospital'}`}
-                               onClick={(e) => !placeId && e.preventDefault()} // Prevent click if no ID
-                               className={!placeId ? 'opacity-50 cursor-not-allowed' : ''}
-                             >
+                             <a href={generateMapLink(placeId)} target="_blank" rel="noopener noreferrer" aria-label={`Get directions to ${name || 'this hospital'}`} onClick={(e) => !placeId && e.preventDefault()} className={!placeId ? 'opacity-50 cursor-not-allowed' : ''}>
                                <Navigation className="mr-1.5 h-4 w-4" /> Get Directions
                              </a>
                            </Button>
@@ -507,19 +544,21 @@ const Emergency = () => {
               })}
                {/* Refresh button at the bottom */}
                <div className="mt-6 flex justify-center border-t pt-5">
-                   <Button onClick={handleRequestLocation} variant="outline" size="sm">
+                   <Button onClick={handleShowHospitalsClick} variant="outline" size="sm">
                        <RefreshCw className="mr-2 h-4 w-4" /> Refresh Hospital List
                    </Button>
                </div>
             </div>
           );
-        // Default case
+        // Default case for Idle, PreLoad, Ready states *after* button click (should be transient)
         default:
-            return <p className="text-center py-10 text-gray-500">Loading state...</p>;
+             // If user clicked but we are somehow back in these initial states, show generic loading
+             return <div className="flex flex-col items-center justify-center text-center flex-grow py-10"><Loader2 className="h-10 w-10 animate-spin text-momcare-primary mb-4" /><p className="text-gray-600 font-medium">Initializing Search...</p></div>;
       }
   };
 
   // --- JSX Structure (Main component render) ---
+  // No changes needed in the main JSX structure below this line
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -542,7 +581,6 @@ const Emergency = () => {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 items-start">
-
           {/* Column 1: Contacts & What to Do */}
           <div className="lg:col-span-1 space-y-8">
             {/* Contacts Card */}
@@ -588,7 +626,7 @@ const Emergency = () => {
               <CardHeader className="bg-amber-50 p-5"><CardTitle className="flex items-center text-xl font-semibold text-amber-700"><Info className="mr-3 h-6 w-6" />Urgent Pregnancy Warning Signs</CardTitle><CardDescription className="text-amber-600 text-sm pt-1">Seek immediate medical attention if you experience any of these.</CardDescription></CardHeader>
               <CardContent className="p-6">
                 <Accordion type="single" collapsible className="w-full">
-                  {/* Preeclampsia Signs */}
+                  {/* Accordion Items remain the same as before */}
                   <AccordionItem value="item-1">
                     <AccordionTrigger className="text-base font-medium hover:no-underline">Signs of Preeclampsia / High Blood Pressure</AccordionTrigger>
                     <AccordionContent className="text-sm space-y-2 pt-2">
@@ -599,7 +637,6 @@ const Emergency = () => {
                       <p className="text-xs text-gray-600 italic mt-1">Why it's urgent: Preeclampsia is a serious condition affecting blood pressure and organs, potentially dangerous for both mother and baby if untreated.</p>
                     </AccordionContent>
                   </AccordionItem>
-                  {/* Preterm Labor Signs */}
                   <AccordionItem value="item-2">
                     <AccordionTrigger className="text-base font-medium hover:no-underline">Signs of Preterm Labor (Before 37 Weeks)</AccordionTrigger>
                     <AccordionContent className="text-sm space-y-2 pt-2">
@@ -611,7 +648,6 @@ const Emergency = () => {
                       <p className="text-xs text-gray-600 italic mt-1">Why it's urgent: Starting labor too early requires medical intervention to potentially stop it or prepare for an early birth.</p>
                     </AccordionContent>
                   </AccordionItem>
-                  {/* Bleeding Signs */}
                    <AccordionItem value="item-3">
                     <AccordionTrigger className="text-base font-medium hover:no-underline">Bleeding Issues</AccordionTrigger>
                     <AccordionContent className="text-sm space-y-2 pt-2">
@@ -619,7 +655,6 @@ const Emergency = () => {
                        <p className="text-xs text-gray-600 italic mt-1">Why it's urgent: Significant bleeding can indicate serious problems like placental abruption or placenta previa.</p>
                     </AccordionContent>
                   </AccordionItem>
-                  {/* Other Urgent Signs */}
                   <AccordionItem value="item-4">
                     <AccordionTrigger className="text-base font-medium hover:no-underline">Other Urgent Concerns</AccordionTrigger>
                     <AccordionContent className="text-sm space-y-2 pt-2">
@@ -669,15 +704,21 @@ const Emergency = () => {
         {/* Nearby Hospitals Card */}
         <Card className="border-gray-200 border shadow-lg rounded-lg overflow-hidden mb-12">
           <CardHeader className="bg-gray-50 p-5 border-b">
-            <CardTitle className="flex items-center text-xl font-semibold text-gray-800"><MapPinned className="mr-3 h-6 w-6 text-momcare-primary" />Nearby Hospitals with Emergency/Maternity Focus</CardTitle>
-            <CardDescription className="mt-1 text-sm text-gray-600">Showing relevant facilities near your current location based on your search for "hospital emergency room maternity labor delivery". Data provided by Google Maps. <b>Always call 102 in a true emergency.</b></CardDescription>
-            {/* Add a note about API Key issues if applicable */}
+            <CardTitle className="flex items-center text-xl font-semibold text-gray-800"><MapPinned className="mr-3 h-6 w-6 text-momcare-primary" />Nearby Hospitals (Nearest First)</CardTitle>
+            <CardDescription className="mt-1 text-sm text-gray-600">
+                {showHospitalsRequested ?
+                    "Showing relevant facilities near your location, sorted by distance. Based on search for 'hospital emergency room maternity...'. Data by Google Maps."
+                  : "Click the button below to find hospitals near you."
+                }
+                 {' '}<b>Always call 102 in a true emergency.</b>
+            </CardDescription>
+            {/* API Key/Error Alerts */}
             {status === LoadingStatus.MapsError && errorMessage?.includes("Google Cloud Console") && (
                  <Alert variant="destructive" className="mt-4 text-xs">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Action Required: Map Service Error</AlertTitle>
                     <AlertDescription>
-                        The map service failed. Please ensure the <strong>Places API (New)</strong> is enabled in your Google Cloud Console project for the API key being used, and check API key restrictions (HTTP referrers, API restrictions). Then, refresh the page.
+                        The map service failed. Ensure <strong>Places API (New)</strong> is enabled in Google Cloud Console for the API key, check restrictions (HTTP referrers, API restrictions), and refresh/retry.
                     </AlertDescription>
                  </Alert>
             )}
@@ -686,13 +727,13 @@ const Emergency = () => {
                     <KeyRound className="h-4 w-4" />
                     <AlertTitle>Action Required: Configuration Error</AlertTitle>
                     <AlertDescription>
-                        The Google Maps API Key is missing. Please ensure the `VITE_PUBLIC_GOOGLE_MAPS_API_KEY` environment variable is set correctly.
+                        Google Maps API Key (`VITE_PUBLIC_GOOGLE_MAPS_API_KEY`) is missing. Set the environment variable correctly.
                     </AlertDescription>
                  </Alert>
             )}
           </CardHeader>
           <CardContent className="p-6 min-h-[300px] flex flex-col">
-            {/* Render dynamic content based on status */}
+            {/* Render dynamic content: Button OR Loading/Results/Errors */}
             {renderHospitalContent()}
           </CardContent>
         </Card>
@@ -704,7 +745,7 @@ const Emergency = () => {
                 <p>This page provides general information and tools for emergency preparedness during pregnancy. It is <strong>not</strong> a substitute for professional medical advice, diagnosis, or treatment.</p>
                 <p>Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition. <strong>Never disregard professional medical advice or delay in seeking it because of something you have read on this application.</strong></p>
                 <p>In case of a medical emergency, call your local emergency number (like 102) immediately.</p>
-                <p>Hospital information (including opening hours, ratings, status, phone, and website) is provided by Google Maps and may not always be completely up-to-date or reflect specific Emergency Room or Maternity Ward availability, capabilities, or capacity. **Verify critical information directly with the hospital if possible, especially regarding ER status and capacity, before traveling.**</p>
+                <p>Hospital information (including distance, opening hours, ratings, status, phone, website) is provided by Google Maps and may not always be completely up-to-date or reflect specific Emergency Room/Maternity Ward availability, capabilities, or capacity. Distance is approximate ("as the crow flies"). **Verify critical information directly with the hospital if possible, especially regarding ER status and capacity, before traveling.**</p>
             </CardContent>
          </Card>
 
