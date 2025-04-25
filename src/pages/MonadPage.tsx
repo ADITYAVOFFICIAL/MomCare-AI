@@ -309,16 +309,25 @@ const MonadPage: React.FC = () => {
             const currentChainId = `0x${network.chainId.toString(16)}`;
             const isCorrect = currentChainId.toLowerCase() === MONAD_CHAIN_ID.toLowerCase();
             setIsOnCorrectNetwork(isCorrect);
-            setNetworkName(network.name || `Chain ID ${currentChainId}`);
+            // --- Modification Start ---
+            // Determine the display name, forcing MONAD_NETWORK_NAME if the network is correct but name is missing/unknown
+            let displayedName = network.name;
+            if (isCorrect && (!displayedName || displayedName.toLowerCase() === 'unknown')) {
+                displayedName = MONAD_NETWORK_NAME; // Use the constant if correct network but name is missing/unknown
+            } else if (!displayedName) {
+                displayedName = `Chain ID ${currentChainId}`; // Fallback if name is missing on incorrect network
+            }
+            setNetworkName(displayedName);
+            // --- Modification End ---
             if (isCorrect) setWeb3Error(prev => (prev?.includes("Incorrect Network") ? null : prev));
-            else setWeb3Error(`Incorrect Network: Please switch MetaMask to ${MONAD_NETWORK_NAME}. You are on ${network.name || 'unknown'}.`);
-            console.log(`Network Check: ${network.name} (${currentChainId}). Correct: ${isCorrect}`);
+            else setWeb3Error(`Incorrect Network: Please switch MetaMask to ${MONAD_NETWORK_NAME}. You are on ${displayedName}.`); // Use displayedName here too
+            console.log(`Network Check: ${displayedName} (${currentChainId}). Correct: ${isCorrect}`);
             return isCorrect;
         } catch (err) {
             console.error("Could not detect network:", err); setWeb3Error("Could not detect network.");
             setIsOnCorrectNetwork(false); setNetworkName(null); return false;
         }
-    }, []); // Constants MONAD_CHAIN_ID, MONAD_NETWORK_NAME are stable
+    }, []);
 
     const setupEthers = useCallback(async (currentProvider: BrowserProvider): Promise<boolean> => {
         setWeb3Error(null);
