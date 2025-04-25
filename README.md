@@ -121,6 +121,22 @@ In essence, MomCare AI consolidates essential pregnancy tools and enhances them 
 **5.Products Page:**
 ![ProductsPage](charts_and_diagrams/demo/products.png)
 
+**6.Doctor Page:**
+![DoctorPage](charts_and_diagrams/demo/doctor.png)
+
+**7.Patient Page:**
+![PatientPage](charts_and_diagrams/demo/patient.png)
+
+**8.NFT Milestones Page:**
+![ProductsPage](charts_and_diagrams/demo/nft.png)
+
+**9.Chat Page:**
+![Chat](charts_and_diagrams/demo/chat.png)
+![Chat Main](charts_and_diagrams/demo/chatmain.png)
+
+**10.Meals & Exercise Page:**
+![MealPage](charts_and_diagrams/demo/mealexe.png)
+
 ---
 
 ## 📊 Charts & Diagrams
