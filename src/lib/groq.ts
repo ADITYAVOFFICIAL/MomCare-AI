@@ -279,7 +279,7 @@ export const startChat = (
 
         // 3. Create a plausible initial assistant response acknowledging the user
         const concernAck = concernMention ? ' and have noted your specific concerns' : '';
-        const initialAssistantText = `Hello ${name}! Thanks for reaching out. I understand you're feeling ${feeling}${weekMention}${concernAck}. I've noted the context you provided (like age${weeksPregnant !== undefined ? ', weeks pregnant,' : ','} etc.). Remember, I'm here for general information and support, not medical advice. Always talk to your doctor or midwife about any health questions or symptoms. How can I assist you today?`;
+        const initialAssistantText = `Hello ${name}! Thanks for reaching out. I understand you're feeling ${feeling}${weekMention}${concernAck}. I've noted the context you provided (like age${weeksPregnant !== undefined ? ', weeks pregnant,' : ','} etc.). Remember, I'm here for general information and support, not medical advice. Always talk to your doctor about any health questions or symptoms. How can I assist you today?`;
         const assistantMessage: ChatCompletionMessageParam = { role: "assistant", content: initialAssistantText };
 
         // Return the initial sequence: System -> User -> Assistant
