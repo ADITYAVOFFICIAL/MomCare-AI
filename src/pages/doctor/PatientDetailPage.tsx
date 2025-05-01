@@ -14,20 +14,18 @@ import {
     getWeightReadings,
     getFilePreview,
     medicalBucketId,
-    UserProfile, // Ensure this includes trackingMode and menstrual fields
+    UserProfile, // Ensure this includes pregnancy fields: weeksPregnant, previousPregnancies, deliveryPreference, etc.
     Appointment,
     MedicalDocument,
     // Import Health Reading Types
     BloodPressureReading,
     BloodSugarReading,
     WeightReading,
-    // Import cycle calculation helpers if needed for display (optional here)
-    // calculateCurrentCycleDay, estimateNextPeriodDate, estimateFertileWindow
 } from '@/lib/appwrite';
 import {
     Loader2, AlertTriangle, ArrowLeft, User, Mail, CalendarDays, HeartPulse,
-    FileText, Download, Info, Activity, Weight, Droplets, BriefcaseMedical,
-    Baby, Settings, Target, List // Added Baby, Settings, Target, List icons
+    FileText, Download, Info, Activity, Weight as WeightIcon, Droplets, BriefcaseMedical, // Renamed Weight to WeightIcon to avoid conflict
+    Baby // Keep Baby icon for pregnancy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -47,7 +45,7 @@ const DetailItem: React.FC<{ label: string; value?: string | number | null | str
     let displayValue: React.ReactNode = <span className="text-gray-400 italic">N/A</span>;
 
     if (Array.isArray(value)) {
-        // Handle array values (e.g., symptoms, goals, dietary prefs)
+        // Handle array values (e.g., dietary prefs)
         if (value.length > 0) {
             displayValue = (
                 <div className="flex flex-wrap gap-1"> {/* Wrap badges */}
@@ -237,9 +235,10 @@ const PatientDetailPage: React.FC = () => {
             } else {
                 toast({ title: "Error", description: "Could not generate document link.", variant: "destructive" });
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Error generating file preview:", error);
-            toast({ title: "Error", description: `Failed to get document link: ${error.message || 'Unknown error'}`, variant: "destructive" });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            toast({ title: "Error", description: `Failed to get document link: ${errorMessage}`, variant: "destructive" });
         }
     };
 
@@ -332,19 +331,11 @@ const PatientDetailPage: React.FC = () => {
                         </p>
                         <div className="flex flex-wrap gap-x-2 gap-y-1 mt-2">
                             {profile.age && <Badge variant="secondary" className="text-xs">Age: {profile.age}</Badge>}
-                            {/* Show relevant badge based on tracking mode */}
-                            {profile.trackingMode === 'pregnancy' && profile.weeksPregnant !== undefined && (
-                                <Badge variant="secondary" className="text-xs bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300 border-pink-300">
-                                    Pregnancy: Week {profile.weeksPregnant}
-                                </Badge>
-                            )}
-                             {profile.trackingMode === 'menstruation' && (
-                                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border-purple-300">
-                                    Tracking Cycle
-                                </Badge>
-                            )}
-                             {profile.trackingMode === 'none' && (
-                                <Badge variant="outline" className="text-xs">Tracking: None</Badge>
+                            {/* Show pregnancy badge if weeks are defined */}
+                            {profile.weeksPregnant !== undefined && (
+                                <Badge variant="secondary" className="text-xs bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-300 border border-pink-300 hover:bg-pink-200 dark:hover:bg-pink-800/70 transition-colors">
+                                Pregnancy: Week {profile.weeksPregnant}
+                            </Badge>
                             )}
                             <Badge variant="outline" className="text-xs font-mono">ID: {userId.substring(0, 8)}...</Badge>
                         </div>
@@ -354,7 +345,7 @@ const PatientDetailPage: React.FC = () => {
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-start">
 
-                    {/* --- Left Column: Profile & Tracking Details --- */}
+                    {/* --- Left Column: Profile & Pregnancy Details --- */}
                     <div className="lg:col-span-1 space-y-6">
                         {/* Profile Information Card */}
                         <Card className="shadow border dark:border-gray-700">
@@ -373,63 +364,26 @@ const PatientDetailPage: React.FC = () => {
                             </CardContent>
                         </Card>
 
-                        {/* --- *** Conditional Tracking Details Card *** --- */}
-                        {profile.trackingMode === 'pregnancy' && (
-                            <Card className="shadow border border-pink-200 dark:border-pink-700/50">
-                                <CardHeader className="bg-pink-50 dark:bg-pink-900/20">
-                                    <CardTitle className="text-lg font-semibold flex items-center gap-2 text-pink-700 dark:text-pink-300"><Baby className="h-5 w-5"/>Pregnancy Details</CardTitle>
-                                </CardHeader>
-                                <CardContent className="divide-y dark:divide-gray-700 px-0">
-                                    <div className="px-6 pt-2 pb-1">
-                                        <DetailItem label="Weeks Pregnant" value={profile.weeksPregnant} icon={CalendarDays} />
-                                        <DetailItem label="Previous Pregnancies" value={profile.previousPregnancies} />
-                                        <DetailItem label="Delivery Preference" value={profile.deliveryPreference} />
-                                        <DetailItem label="Pre-existing Conditions" value={profile.preExistingConditions} icon={HeartPulse}/>
-                                        <DetailItem label="Activity Level" value={profile.activityLevel} icon={Activity}/>
-                                        <DetailItem label="Dietary Preferences" value={profile.dietaryPreferences} />
-                                        <DetailItem label="Partner Support" value={profile.partnerSupport} />
-                                        <DetailItem label="Work Situation" value={profile.workSituation} />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
+                        {/* --- *** Pregnancy Details Card (Always Rendered) *** --- */}
+                        <Card className="shadow border border-pink-200 dark:border-pink-700/50">
+                            <CardHeader className="bg-pink-50 dark:bg-pink-900/20">
+                                <CardTitle className="text-lg font-semibold flex items-center gap-2 text-pink-700 dark:text-pink-300"><Baby className="h-5 w-5"/>Pregnancy Details</CardTitle>
+                            </CardHeader>
+                            <CardContent className="divide-y dark:divide-gray-700 px-0">
+                                <div className="px-6 pt-2 pb-1">
+                                    <DetailItem label="Weeks Pregnant" value={profile.weeksPregnant} icon={CalendarDays} />
+                                    <DetailItem label="Previous Pregnancies" value={profile.previousPregnancies} />
+                                    <DetailItem label="Delivery Preference" value={profile.deliveryPreference} />
+                                    <DetailItem label="Pre-existing Conditions" value={profile.preExistingConditions} icon={HeartPulse}/>
+                                    <DetailItem label="Activity Level" value={profile.activityLevel} icon={Activity}/>
+                                    <DetailItem label="Dietary Preferences" value={profile.dietaryPreferences} />
+                                    <DetailItem label="Partner Support" value={profile.partnerSupport} />
+                                    <DetailItem label="Work Situation" value={profile.workSituation} />
+                                </div>
+                            </CardContent>
+                        </Card>
+                        {/* --- *** End Pregnancy Details Card *** --- */}
 
-                        {profile.trackingMode === 'menstruation' && (
-                            <Card className="shadow border border-purple-200 dark:border-purple-700/50">
-                                <CardHeader className="bg-purple-50 dark:bg-purple-900/20">
-                                    <CardTitle className="text-lg font-semibold flex items-center gap-2 text-purple-700 dark:text-purple-300"><Droplets className="h-5 w-5"/>Menstrual Cycle Details</CardTitle>
-                                </CardHeader>
-                                <CardContent className="divide-y dark:divide-gray-700 px-0">
-                                    <div className="px-6 pt-2 pb-1">
-                                        <DetailItem label="Last Period Start" value={formatDateDisplay(profile.lastMenstrualPeriodDate)} icon={CalendarDays} />
-                                        <DetailItem label="Avg. Cycle Length" value={profile.cycleLength ? `${profile.cycleLength} days` : undefined} />
-                                        <DetailItem label="Avg. Period Length" value={profile.periodLength ? `${profile.periodLength} days` : undefined} />
-                                        <DetailItem label="Tracking Goals" value={profile.trackingGoals} icon={Target}/>
-                                        <DetailItem label="Tracked Symptoms" value={profile.menstrualSymptoms} icon={Activity}/>
-                                        <DetailItem label="Pre-existing Conditions" value={profile.preExistingConditions} icon={HeartPulse}/>
-                                        <DetailItem label="Activity Level" value={profile.activityLevel} icon={Activity}/>
-                                        <DetailItem label="Dietary Preferences" value={profile.dietaryPreferences} />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {profile.trackingMode === 'none' && (
-                             <Card className="shadow border dark:border-gray-700">
-                                <CardHeader>
-                                    <CardTitle className="text-lg font-semibold flex items-center gap-2"><Settings className="h-5 w-5 text-gray-500"/>Tracking Details</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">Patient has not selected a primary tracking mode (Pregnancy or Menstruation).</p>
-                                     <div className="mt-4 divide-y dark:divide-gray-700">
-                                        <DetailItem label="Pre-existing Conditions" value={profile.preExistingConditions} icon={HeartPulse}/>
-                                        <DetailItem label="Activity Level" value={profile.activityLevel} icon={Activity}/>
-                                        <DetailItem label="Dietary Preferences" value={profile.dietaryPreferences} />
-                                     </div>
-                                </CardContent>
-                            </Card>
-                        )}
-                         {/* --- *** End Conditional Tracking Details Card *** --- */}
                     </div>
                     {/* --- End Left Column --- */}
 
@@ -551,7 +505,7 @@ const PatientDetailPage: React.FC = () => {
                                 {/* Weight Readings */}
                                 <div>
                                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                                        <Weight className="h-4 w-4"/> Weight
+                                        <WeightIcon className="h-4 w-4"/> Weight
                                     </h4>
                                     {isLoadingWeight ? <ReadingListSkeleton /> :
                                      isErrorWeight ? <Alert variant="destructive" className="text-xs"><AlertTriangle className="h-4 w-4"/><AlertTitle>Error</AlertTitle><AlertDescription>Could not load Weight readings. {weightError?.message}</AlertDescription></Alert> :
