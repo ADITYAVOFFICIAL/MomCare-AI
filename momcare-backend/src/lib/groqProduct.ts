@@ -49,7 +49,7 @@ if (!API_KEY) {
 const groq: Groq | null = API_KEY ? new Groq({ apiKey: API_KEY, dangerouslyAllowBrowser: true }) : null;
 
 const generationConfig = {
-    temperature: 0.5,
+    temperature: 0.4,
     max_tokens: 4096, // Kept higher for potentially longer reasoning strings + 25 items
     top_p: 0.9,
 };
